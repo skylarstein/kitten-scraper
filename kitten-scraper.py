@@ -6,7 +6,6 @@ import yaml
 from datetime import datetime
 from argparse import ArgumentParser
 from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
 
 class KittenScraper():
 
@@ -21,16 +20,16 @@ class KittenScraper():
 
 	def load_configuration(self):
 		try:
-			config = yaml.load(file(self.CONFIG_FILE, 'r'))
+			config = yaml.load(open(self.CONFIG_FILE, 'r'))
 			self.username = config['username']
 			self.password = config['password']
 			return True
 
 		except yaml.YAMLError as err:
-			print 'ERROR: Unable to parse configuration file: {}, {}'.format(self.CONFIG_FILE, err)
-		
+			print('ERROR: Unable to parse configuration file: {}, {}'.format(self.CONFIG_FILE, err))
+
 		except IOError as err:
-			print 'ERROR: Unable to read configuration file: {}, {}'.format(self.CONFIG_FILE, err)
+			print('ERROR: Unable to read configuration file: {}, {}'.format(self.CONFIG_FILE, err))
 
 		return False
 
@@ -44,7 +43,7 @@ class KittenScraper():
 		self.driver = webdriver.Chrome(chromedriver_path, chrome_options = chrome_options)
 
 	def login(self):
-		print 'Logging in...'
+		print('Logging in...')
 		self.driver.get(self.LOGIN_URL)
 
 		self.driver.find_element_by_id("txt_username").send_keys(self.username)
@@ -53,11 +52,11 @@ class KittenScraper():
 		self.driver.find_element_by_id('Continue').click()
 
 	def get_person_data(self, person_number):
-		print 'Looking up person number {}...'.format(person_number)
+		print('Looking up person number {}...'.format(person_number))
 
 		self.driver.get(self.SEARCH_URL)
 		self.driver.find_element_by_id("userid").send_keys(person_number)
-		self.driver.find_element_by_id("userid").send_keys(Keys.RETURN)
+		self.driver.find_element_by_id("userid").send_keys(webdriver.common.keys.Keys.RETURN)
 
 		first_name      = self.get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtFirstName')
 		last_name       = self.get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtLastName')
@@ -103,17 +102,17 @@ class KittenReportReader:
 			    self.sheet.row_values(0)[4] != 'Age' or
 			    self.sheet.row_values(0)[5] != 'Foster Parent ID'):
 
-				print 'ERROR: Unexpected column layout in {}'.format(xls_filename)
+				print('ERROR: Unexpected column layout in {}'.format(xls_filename))
 				return False
 
-			print 'Loaded report {}'.format(xls_filename)
+			print('Loaded report {}'.format(xls_filename))
 			return True
 
 		except IOError as err:
-			print 'ERROR: Unable to read xls file: {}, {}'.format(xls_filename, err)
+			print('ERROR: Unable to read xls file: {}, {}'.format(xls_filename, err))
 
 		except xlrd.XLRDError as err:
-			print 'ERROR: Unable to read xls file: {}'.format(err.message)
+			print('ERROR: Unable to read xls file: {}'.format(err.message))
 
 		return False
 
@@ -156,7 +155,7 @@ class KittenReportReader:
 		return values
 
 	def output_results(self, persons_data, csv_filename):
-		print 'Writing results to {}...'.format(csv_filename)
+		print('Writing results to {}...'.format(csv_filename))
 
 		new_rows = []
 	
@@ -255,7 +254,7 @@ if __name__ == "__main__":
 		sys.exit()
 
 	persons = kitten_reader.get_person_numbers()
-	print 'Found foster parent numbers: {}'.format(persons)
+	print('Found foster parent numbers: {}'.format(persons))
 
 	# Log in and query foster parent details (person number -> name and contact details)
 	#
@@ -276,4 +275,4 @@ if __name__ == "__main__":
 	#
 	kitten_reader.output_results(persons_data, args.output)
 
-	print '\nKitten scraping completed in {0:.3f} seconds'.format(time.time() - start_time)
+	print('\nKitten scraping completed in {0:.3f} seconds'.format(time.time() - start_time))
