@@ -131,6 +131,11 @@ class KittenReportReader:
         return persons
 
     def xlsfloat_as_datetime(self, xlsfloat, workbook_datemode):
+        ''' Convert Excel float date type to datetime
+        '''
+        if not xlsfloat:
+            return None
+
         return datetime(*xlrd.xldate_as_tuple(xlsfloat, workbook_datemode))
         
     def copy_row_as_text(self, row_number):
@@ -143,7 +148,7 @@ class KittenReportReader:
 
             if cell_type == xlrd.XL_CELL_DATE:
                 dt = self.xlsfloat_as_datetime(self.sheet.row_values(row_number)[col_number], self.workbook.datemode)
-                # wrapping datestr in ="%s" to stop Excel from trying to be smart with date strings
+                # wrapping datestr in ="%s" to deal with Excel auto-formatting issues
                 values.append(dt.strftime('="%d-%b-%Y %-I:%M %p"'))
 
             elif cell_type == xlrd.XL_CELL_NUMBER:
@@ -207,6 +212,7 @@ class KittenReportReader:
             animal_type = self.sheet.row_values(row_number)[1]
             animal_number = self.sheet.row_values(row_number)[2]
             person_number = self.sheet.row_values(row_number)[5]
+            status_datetime = self.xlsfloat_as_datetime(self.sheet.row_values(row_number)[0], self.workbook.datemode)
 
             # If there is no animal number in this row, skip the row
             #
@@ -260,12 +266,20 @@ class KittenReportReader:
                     email += '\r'
                 email += secondary_email
 
+            animal_quantity = self.count_animals(person_number)
+            foster_experience = '' # TODO
+
+            # Since we're receiving "last 24 hour reports" I'll assume received date is the same
+            # day as the status date
+            #
+            date_received = status_datetime.strftime('%d-%b-%Y') if status_datetime else ''
+
             new_rows[-1].append('"{}"'.format(name))
             new_rows[-1].append('"{}"'.format(email))
             new_rows[-1].append('"{}"'.format(phone))
-            new_rows[-1].append('') # TODO foster experience
-            new_rows[-1].append('') # TODO date kittens received
-            new_rows[-1].append('"{}"'.format(self.count_animals(person_number)))
+            new_rows[-1].append('"{}"'.format(foster_experience))
+            new_rows[-1].append('="{}"'.format(date_received)) # using ="%s" for dates to deal with Excel auto-formatting issues
+            new_rows[-1].append('"{}"'.format(animal_quantity))
 
         with open(csv_filename, 'w') as outfile:
             for row in new_rows:
