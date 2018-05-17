@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import time
 import xlrd
@@ -13,7 +14,7 @@ class KittenScraper():
         self.LOGIN_URL = 'http://192.168.100.27/login.aspx?aspInitiated=1.1'
         self.SEARCH_URL = 'http://192.168.100.27/main.asp'
 
-    def close(self):
+    def exit(self):
         ''' Close and exit the browser instance
         '''
         self.driver.close()
@@ -140,13 +141,13 @@ class KittenReportReader:
         ''' Return a set of unique person numbers found in the daily report
         '''
         persons = set()
-        for n in range(1, self.sheet.nrows):
+        for row_number in range(1, self.sheet.nrows):
             # If a person number has no associated animal number, this is due to a bug in the
             # report which includes a mostly empty row for an animal's previous foster parent.
             # Ignore these cases.
             #
-            animal_number = self.sheet.row_values(n)[2]
-            person_number = self.sheet.row_values(n)[5]
+            animal_number = self.sheet.row_values(row_number)[2]
+            person_number = self.sheet.row_values(row_number)[5]
 
             if isinstance(animal_number, float): # xls stores all numbers as float
                 persons.add(str(int(person_number)))
@@ -165,7 +166,6 @@ class KittenReportReader:
         ''' Output is written as csv so we need to stringify all types (dates in particular)
         '''
         values = []
-
         for col_number in range(0, len(self.sheet.row_values(row_number))):
             cell_type = self.sheet.cell_type(row_number, col_number)
 
@@ -185,20 +185,49 @@ class KittenReportReader:
 
         return values
 
+    def pretty_print_animal_age(self, age_string):
+        ''' Expecting an age string in the format '%d years %d months %d weeks'
+        '''
+        result = ''
+        try:
+            # For the sake of brevity in the spreadsheet, I'll shorten the age string when I can.
+            # For example, if an animal is > 1 year old, there is no need to include months and weeks.
+            #
+            (years, months, weeks) = re.search(r'(\d+) years (\d+) months (\d+) weeks', age_string).groups()
+            if int(years) > 0:
+                result = '{} years'.format(years)
+            elif int(months) >= 3:
+                result = '{} months'.format(months)
+            else:
+                result = '{} weeks'.format(int(weeks) + int(months) * 4)
+        except:
+            pass
+
+        return result
+
     def count_animals(self, person_number):
-        ''' Count the number of each animal type assigned to this person number
+        ''' Count the number and age of each animal type assigned to this person number
         '''
         animals = []
+        animals_age = {}
         last_animal_type = ''
         for row_number in range(1, self.sheet.nrows): # ignore header
             a_type = self.sheet.row_values(row_number)[1]
+            a_age = self.sheet.row_values(row_number)[4]
             p_number = self.sheet.row_values(row_number)[5]
-            
-            a_type = last_animal_type if not a_type else a_type
-            last_animal_type = a_type
+
+            if not a_type:
+                a_type = last_animal_type
+            else:
+                last_animal_type = a_type
 
             if person_number == p_number:
                 animals.append(a_type)
+                # WARNING: Making an assumption here that same animal types will be of the same age
+                # (or at least close enough in grouped litters) so that choosing one age to share won't
+                # be much of an issue
+                #
+                animals_age[a_type] = a_age
 
         # We now have a list of all animal types. Next, create a set with total counts per type.
         #
@@ -212,9 +241,10 @@ class KittenReportReader:
         for animal in animal_counts:
             if result_str:
                 result_str += '\r'
-            result_str += '{} {}{}'.format(animal_counts[animal], animal, 's' if animal_counts[animal] > 1 else '')
+            age = self.pretty_print_animal_age(animals_age[animal])
+            result_str += '{} {}{} @ {}'.format(animal_counts[animal], animal, 's' if animal_counts[animal] > 1 else '', age)
 
-        return result_str
+        return result_str.lower()
 
     def output_results(self, persons_data, csv_filename):
         ''' Combine the newly gathered person data with the daily report, output results
@@ -224,7 +254,7 @@ class KittenReportReader:
 
         new_rows = []
 
-        # Start with the original column headers and then add our new ones
+        # First include the original column headers, then add columns for our new data
         #
         new_rows.append(self.sheet.row_values(0))
         new_rows[-1].append('Name')
@@ -254,7 +284,7 @@ class KittenReportReader:
             if not animal_type:
                 continue
 
-            # Grab the person data from their person number
+            # Grab the person data from the associated person number
             #
             person_number_str = str(int(person_number))
             person_data = persons_data[person_number_str] if person_number_str in persons_data else {}
@@ -347,7 +377,7 @@ if __name__ == "__main__":
     for person in persons:
         persons_data[person] = kitten_scraper.get_person_data(person)
 
-    kitten_scraper.close()
+    kitten_scraper.exit()
 
     # Output the combined results to csv
     #
