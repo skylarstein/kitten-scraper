@@ -12,28 +12,34 @@ class KittenScraper():
     def __init__(self):
         self.LOGIN_URL = 'http://192.168.100.27/login.aspx?aspInitiated=1.1'
         self.SEARCH_URL = 'http://192.168.100.27/main.asp'
-        self.CONFIG_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.yaml')
 
     def close(self):
+        ''' Close and exit the browser instance
+        '''
         self.driver.close()
         self.driver.quit()
 
     def load_configuration(self):
+        ''' A config.yaml configuration file is expected to be in the same directory as this script
+        '''
         try:
-            config = yaml.load(open(self.CONFIG_FILE, 'r'))
+            config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.yaml')
+            config = yaml.load(open(config_file, 'r'))
             self.username = config['username']
             self.password = config['password']
             return True
 
         except yaml.YAMLError as err:
-            print('ERROR: Unable to parse configuration file: {}, {}'.format(self.CONFIG_FILE, err))
+            print('ERROR: Unable to parse configuration file: {}, {}'.format(config_file, err))
 
         except IOError as err:
-            print('ERROR: Unable to read configuration file: {}, {}'.format(self.CONFIG_FILE, err))
+            print('ERROR: Unable to read configuration file: {}, {}'.format(config_file, err))
 
         return False
 
     def start_browser(self, show_browser):
+        ''' Instantiate the browser, configure options as needed
+        '''
         chrome_options = webdriver.ChromeOptions()
         chrome_options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36')
         if not show_browser:
@@ -43,6 +49,8 @@ class KittenScraper():
         self.driver = webdriver.Chrome(chromedriver_path, chrome_options = chrome_options)
 
     def login(self):
+        ''' Load the login page, enter credentials, submit
+        '''
         print('Logging in...')
         self.driver.get(self.LOGIN_URL)
 
@@ -52,6 +60,8 @@ class KittenScraper():
         self.driver.find_element_by_id('Continue').click()
 
     def get_person_data(self, person_number):
+        ''' Search for the given person number, return details and contact information
+        '''
         print('Looking up person number {}...'.format(person_number))
 
         self.driver.get(self.SEARCH_URL)
@@ -77,20 +87,30 @@ class KittenScraper():
         }
 
     def get_text_by_id(self, element_id):
+        ''' Quick helper function to get attribute text with proper error handling
+        '''
         try:
             return self.driver.find_element_by_id(element_id).get_attribute('value')
         except:
             return ''
 
     def get_text_by_xpath(self, element_xpath):
+        ''' Quick helper function to get attribute text with proper error handling
+        '''
         try:
             return self.driver.find_element_by_xpath(element_xpath).get_attribute('innerText')
         except:
             return ''
 
 class KittenReportReader:
+    ''' KittenReportReader will process process the incoming daily report, extend data with
+        additional provided details, and output new results to csv
+    '''
 
-    def load_xls(self, xls_filename):
+    def open_xls(self, xls_filename):
+        ''' Open the daily report xls, perform some basic validation to make sure everything
+            is in place.
+        '''
         try:
             self.workbook = xlrd.open_workbook(xls_filename)
             self.sheet = self.workbook.sheet_by_index(0)
@@ -117,10 +137,13 @@ class KittenReportReader:
         return False
 
     def get_person_numbers(self):
+        ''' Return a set of unique person numbers found in the daily report
+        '''
         persons = set()
         for n in range(1, self.sheet.nrows):
             # If a person number has no associated animal number, this is due to a bug in the
-            # report which includes a mostly empty row for an animal's previous foster parent
+            # report which includes a mostly empty row for an animal's previous foster parent.
+            # Ignore these cases.
             #
             animal_number = self.sheet.row_values(n)[2]
             person_number = self.sheet.row_values(n)[5]
@@ -139,7 +162,7 @@ class KittenReportReader:
         return datetime(*xlrd.xldate_as_tuple(xlsfloat, workbook_datemode))
         
     def copy_row_as_text(self, row_number):
-        ''' Output is going to CSV so we need to stringify all types (dates in particular)
+        ''' Output is written as csv so we need to stringify all types (dates in particular)
         '''
         values = []
 
@@ -163,7 +186,7 @@ class KittenReportReader:
         return values
 
     def count_animals(self, person_number):
-        ''' Return counts for each animal type assigned to this person_number
+        ''' Count the number of each animal type assigned to this person number
         '''
         animals = []
         last_animal_type = ''
@@ -194,10 +217,13 @@ class KittenReportReader:
         return result_str
 
     def output_results(self, persons_data, csv_filename):
+        ''' Combine the newly gathered person data with the daily report, output results
+            to a new csv document.
+        '''
         print('Writing results to {}...'.format(csv_filename))
 
         new_rows = []
-    
+
         # Start with the original column headers and then add our new ones
         #
         new_rows.append(self.sheet.row_values(0))
@@ -299,10 +325,10 @@ if __name__ == "__main__":
         arg_parser.print_help()
         sys.exit(0)
 
-    # Load me up some kittens and foster parent numbers from the XLS report
+    # Load me up some kittens and foster parent numbers from the xls report
     #
     kitten_reader = KittenReportReader()
-    if not kitten_reader.load_xls(args.input):
+    if not kitten_reader.open_xls(args.input):
         sys.exit()
 
     persons = kitten_reader.get_person_numbers()
@@ -322,8 +348,8 @@ if __name__ == "__main__":
         persons_data[person] = kitten_scraper.get_person_data(person)
 
     kitten_scraper.close()
-    
-    # Output the combined results to CSV
+
+    # Output the combined results to csv
     #
     kitten_reader.output_results(persons_data, args.output)
 
