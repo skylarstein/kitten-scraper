@@ -274,10 +274,10 @@ class KittenReportReader:
             home_number = person_data['home_phone'] if 'home_phone' in person_data else ''
 
             phone = ''
-            if len(cell_number):
+            if len(cell_number) >= 10: # ignore incomplete phone numbers
                 phone = 'c: {}'.format(cell_number)
 
-            if len(home_number):
+            if len(home_number) >= 10: # ignore incomplete phone numbers
                 if len(phone):
                     phone += '\r'
                 phone += 'h: {}'.format(home_number)
