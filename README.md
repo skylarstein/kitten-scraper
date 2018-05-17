@@ -36,4 +36,4 @@ optional arguments:
 ## Let's Do This
 
 ```
-% python kitten-scraper.py -i /Users/skylar/Downloads/FosterReport.xls -o FosterReport.csv --headless
+% python kitten-scraper.py -i /Users/skylar/Downloads/FosterReport.xls -o FosterReport.csv
