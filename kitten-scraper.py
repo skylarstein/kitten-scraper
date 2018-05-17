@@ -33,10 +33,10 @@ class KittenScraper():
 
         return False
 
-    def start_browser(self, headless):
+    def start_browser(self, show_browser):
         chrome_options = webdriver.ChromeOptions()
         chrome_options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36')
-        if headless:
+        if not show_browser:
             chrome_options.add_argument("--headless")
 
         chromedriver_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'bin/mac64/chromedriver')
@@ -292,7 +292,7 @@ if __name__ == "__main__":
     arg_parser = ArgumentParser()
     arg_parser.add_argument('-i', '--input', help = 'Daily kitten report (xls)', required = False)
     arg_parser.add_argument('-o', '--output', help = 'Output file (csv)', required = False)
-    arg_parser.add_argument('--headless', help = 'Run headless browser', required = False, action = 'store_true')
+    arg_parser.add_argument('--show_browser', help = 'Show the browser window while working', required = False, action = 'store_true')
     args = arg_parser.parse_args()
 
     if not args.input or not args.output:
@@ -314,7 +314,7 @@ if __name__ == "__main__":
     if not kitten_scraper.load_configuration():
         sys.exit()
 
-    kitten_scraper.start_browser(args.headless)
+    kitten_scraper.start_browser(args.show_browser)
     kitten_scraper.login()
 
     persons_data = {}
