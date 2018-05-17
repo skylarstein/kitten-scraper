@@ -28,10 +28,10 @@ usage: kitten-scraper.py [-h] [-i INPUT] [-o OUTPUT] [--headless]
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT, --input INPUT
-                        Daily kitten report (xls)
+                        daily kitten report (xls)
   -o OUTPUT, --output OUTPUT
-                        Output file (csv)
-  --headless            Run headless browser
+                        output file (csv)
+  --show_browser        show the browser window while working
 ```
 ## Let's Do This
 

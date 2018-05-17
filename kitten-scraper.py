@@ -290,9 +290,9 @@ if __name__ == "__main__":
     start_time = time.time()
 
     arg_parser = ArgumentParser()
-    arg_parser.add_argument('-i', '--input', help = 'Daily kitten report (xls)', required = False)
-    arg_parser.add_argument('-o', '--output', help = 'Output file (csv)', required = False)
-    arg_parser.add_argument('--show_browser', help = 'Show the browser window while working', required = False, action = 'store_true')
+    arg_parser.add_argument('-i', '--input', help = 'daily kitten report (xls)', required = False)
+    arg_parser.add_argument('-o', '--output', help = 'output file (csv)', required = False)
+    arg_parser.add_argument('--show_browser', help = 'show the browser window while working', required = False, action = 'store_true')
     args = arg_parser.parse_args()
 
     if not args.input or not args.output:
