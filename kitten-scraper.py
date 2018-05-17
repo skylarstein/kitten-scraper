@@ -39,7 +39,7 @@ class KittenScraper():
         if headless:
             chrome_options.add_argument("--headless")
 
-        chromedriver_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'bin/macosx/chromedriver')
+        chromedriver_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'bin/mac64/chromedriver')
         self.driver = webdriver.Chrome(chromedriver_path, chrome_options = chrome_options)
 
     def login(self):
@@ -130,6 +130,9 @@ class KittenReportReader:
 
         return persons
 
+    def xlsfloat_as_datetime(self, xlsfloat, workbook_datemode):
+        return datetime(*xlrd.xldate_as_tuple(xlsfloat, workbook_datemode))
+        
     def copy_row_as_text(self, row_number):
         ''' Output is going to CSV so we need to stringify all types (dates in particular)
         '''
@@ -139,7 +142,7 @@ class KittenReportReader:
             cell_type = self.sheet.cell_type(row_number, col_number)
 
             if cell_type == xlrd.XL_CELL_DATE:
-                dt = datetime(*xlrd.xldate_as_tuple(self.sheet.row_values(row_number)[col_number], self.workbook.datemode))
+                dt = self.xlsfloat_as_datetime(self.sheet.row_values(row_number)[col_number], self.workbook.datemode)
                 # wrapping datestr in ="%s" to stop Excel from trying to be smart with date strings
                 values.append(dt.strftime('="%d-%b-%Y %-I:%M %p"'))
 
@@ -153,6 +156,37 @@ class KittenReportReader:
                 values.append('"{}"'.format(s))
 
         return values
+
+    def count_animals(self, person_number):
+        ''' Return counts for each animal type assigned to this person_number
+        '''
+        animals = []
+        last_animal_type = ''
+        for row_number in range(1, self.sheet.nrows): # ignore header
+            a_type = self.sheet.row_values(row_number)[1]
+            p_number = self.sheet.row_values(row_number)[5]
+            
+            a_type = last_animal_type if not a_type else a_type
+            last_animal_type = a_type
+
+            if person_number == p_number:
+                animals.append(a_type)
+
+        # We now have a list of all animal types. Next, create a set with total counts per type.
+        #
+        animal_counts = {}
+        for animal in set(animals):
+            animal_counts[animal] = animals.count(animal)
+
+        # Pretty-print results
+        #
+        result_str = ''
+        for animal in animal_counts:
+            if result_str:
+                result_str += '\r'
+            result_str += '{} {}{}'.format(animal_counts[animal], animal, 's' if animal_counts[animal] > 1 else '')
+
+        return result_str
 
     def output_results(self, persons_data, csv_filename):
         print('Writing results to {}...'.format(csv_filename))
@@ -169,10 +203,14 @@ class KittenReportReader:
         new_rows[-1].append('Date Kittens Received')	
         new_rows[-1].append('Quantity')
 
-        for row_number in range(1, self.sheet.nrows):
+        for row_number in range(1, self.sheet.nrows): # ignore header
+            animal_type = self.sheet.row_values(row_number)[1]
+            animal_number = self.sheet.row_values(row_number)[2]
+            person_number = self.sheet.row_values(row_number)[5]
+
             # If there is no animal number in this row, skip the row
             #
-            if not self.sheet.row_values(row_number)[2]:
+            if not animal_number:
                 continue
 
             # Include original column data as text since we're building a CSV document
@@ -181,13 +219,13 @@ class KittenReportReader:
 
             # Only include person details for rows with 'Current Animal Type' populated
             #
-            if not self.sheet.row_values(row_number)[1]:
+            if not animal_type:
                 continue
 
             # Grab the person data from their person number
             #
-            person_number = str(int(self.sheet.row_values(row_number)[5]))
-            person_data = persons_data[person_number] if person_number in persons_data else {}
+            person_number_str = str(int(person_number))
+            person_data = persons_data[person_number_str] if person_number_str in persons_data else {}
 
             # Build full name
             #
@@ -209,7 +247,7 @@ class KittenReportReader:
 
             if len(home_number):
                 if len(phone):
-                    phone += '\r\n'
+                    phone += '\r'
                 phone += 'h: {}'.format(home_number)
 
             # Build email(s)
@@ -219,7 +257,7 @@ class KittenReportReader:
 
             if len(secondary_email):
                 if len(email):
-                    email += '\r\n'
+                    email += '\r'
                 email += secondary_email
 
             new_rows[-1].append('"{}"'.format(name))
@@ -227,7 +265,7 @@ class KittenReportReader:
             new_rows[-1].append('"{}"'.format(phone))
             new_rows[-1].append('') # TODO foster experience
             new_rows[-1].append('') # TODO date kittens received
-            new_rows[-1].append('') # TODO quantity
+            new_rows[-1].append('"{}"'.format(self.count_animals(person_number)))
 
         with open(csv_filename, 'w') as outfile:
             for row in new_rows:
