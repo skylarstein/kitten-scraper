@@ -7,12 +7,19 @@ import yaml
 from datetime import datetime
 from argparse import ArgumentParser
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.by import By
 
 class KittenScraper():
 
     def __init__(self):
         self.LOGIN_URL = 'http://192.168.100.27/login.aspx?aspInitiated=1.1'
         self.SEARCH_URL = 'http://192.168.100.27/main.asp'
+
+        # The "List All Animals" pagesize=20 query string may lead you to believe you can request more than
+        # 20 records per page, but alas, it always returns 20 regardless of this value
+        #
+        self.LIST_ANIMALS_URL_FORMAT = 'http://192.168.100.27/person/listAll.asp?tpage={}&pagesize=20&task=view&recnum={}'
 
     def exit(self):
         ''' Close and exit the browser instance
@@ -69,23 +76,65 @@ class KittenScraper():
         self.driver.find_element_by_id("userid").send_keys(person_number)
         self.driver.find_element_by_id("userid").send_keys(webdriver.common.keys.Keys.RETURN)
 
-        first_name      = self.get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtFirstName')
-        last_name       = self.get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtLastName')
-        preferred_name  = self.get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtPreferredName')
-        home_phone      = self.get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_homePhone_txtPhone3')
-        cell_phone      = self.get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_mobilePhone_txtPhone3')		
-        primary_email   = self.get_text_by_xpath('//*[@id="emailTable"]/tbody/tr[1]/td[1]')
-        secondary_email = self.get_text_by_xpath('//*[@id="emailTable"]/tbody/tr[2]/td[1]')
+        first_name            = self.get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtFirstName')
+        last_name             = self.get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtLastName')
+        preferred_name        = self.get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtPreferredName')
+        home_phone            = self.get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_homePhone_txtPhone3')
+        cell_phone            = self.get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_mobilePhone_txtPhone3')		
+        primary_email         = self.get_text_by_xpath('//*[@id="emailTable"]/tbody/tr[1]/td[1]')
+        secondary_email       = self.get_text_by_xpath('//*[@id="emailTable"]/tbody/tr[2]/td[1]')
+        prev_animals_fostered = self.prev_animals_fostered(person_number)
 
         return {
-            'first_name'      : first_name,
-            'last_name'       : last_name,
-            'preferred_name'  : preferred_name,
-            'home_phone'      : home_phone,
-            'cell_phone'      : cell_phone,
-            'primary_email'   : primary_email,
-            'secondary_email' : secondary_email
+            'first_name'            : first_name,
+            'last_name'             : last_name,
+            'preferred_name'        : preferred_name,
+            'home_phone'            : home_phone,
+            'cell_phone'            : cell_phone,
+            'primary_email'         : primary_email,
+            'secondary_email'       : secondary_email,
+            'prev_animals_fostered' : prev_animals_fostered
         }
+
+    def prev_animals_fostered(self, person_number):
+        ''' Determine the total number of felines this person previously fostered. This is used
+            to determine feline foster experience level.
+
+            Load the list of all animals this person has been responsible for, page by page until
+            we have no more pages.
+        '''
+        page_number = 1
+        previous_feline_foster_count = 0
+        while True:
+            self.driver.get(self.LIST_ANIMALS_URL_FORMAT.format(page_number, person_number))
+            try:
+                table = self.driver.find_element_by_id('Table3')
+                rows = table.find_elements(By.TAG_NAME, 'tr')
+                foster_tr_active = False
+
+                for row in rows:
+                    cols = row.find_elements(By.TAG_NAME, 'td')
+                    num_cols = len(cols)
+
+                    if num_cols == 10: 
+                        if foster_tr_active:
+                            #print ','.join(col.text for col in cols)
+                            animal_type = cols[5].text
+                            animal_status = cols[2].text
+                            if (animal_type == 'Cat' or animal_type == 'Kitten') and animal_status != 'In Foster':
+                                previous_feline_foster_count += 1
+
+                    elif num_cols == 1 and cols[0].text == 'Fostered':
+                        foster_tr_active = True
+
+                    else:
+                        foster_tr_active = False
+
+            except NoSuchElementException:
+                break
+
+            page_number = page_number + 1
+        return previous_feline_foster_count
 
     def get_text_by_id(self, element_id):
         ''' Quick helper function to get attribute text with proper error handling
@@ -323,7 +372,8 @@ class KittenReportReader:
                 email += secondary_email
 
             animal_quantity = self.count_animals(person_number)
-            foster_experience = '' # TODO
+            prev_animals_fostered = person_data['prev_animals_fostered']
+            foster_experience = 'NEW' if not prev_animals_fostered else '{} previous'.format(prev_animals_fostered)
 
             # Since we're receiving "last 24 hour reports" I'll assume received date is the same
             # day as the status date
