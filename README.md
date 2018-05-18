@@ -17,7 +17,7 @@ Don't have pip installed? Two options:
 ```
 $ sudo easy_install pip
 ```
-
+or..
 ```
 $ curl https://bootstrap.pypa.io/get-pip.py | sudo python
 ```
