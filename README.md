@@ -35,7 +35,7 @@ password : your_password
 
 ```
 % python kitten-scraper.py --help
-usage: kitten-scraper.py [-h] [-i INPUT] [-o OUTPUT] [--headless]
+usage: kitten-scraper.py [-h] [-i INPUT] [-o OUTPUT] [--show_browser]
 
 optional arguments:
   -h, --help            show this help message and exit
