@@ -5,11 +5,23 @@
 
 ## Clone the Repository and Install Dependencies
 
+Optionally (instead of git clone), you can [download the zip archive](https://github.com/skylarstein/kitten-scraper/archive/master.zip)
+
 ```
 % git clone https://github.com/skylarstein/kitten-scraper.git kitten-scraper
 % cd kitten-scraper
 % pip install -r requirements.txt
 ```
+Don't have pip installed? Two options:
+
+```
+$ sudo easy_install pip
+```
+
+```
+$ curl https://bootstrap.pypa.io/get-pip.py | sudo python
+```
+
 
 ## Create the Configuration File
 Create a text file named 'config.yaml' in the kitten-scraper directory and enter your credentials in this format:
