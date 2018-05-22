@@ -29,6 +29,9 @@ Create a text file named 'config.yaml' in the kitten-scraper directory and enter
 ```
 username : your_username
 password : your_password
+do_not_assign_mentor : 
+    - 100 # special person number
+    - 200 # special person number
 ```
 
 ## Command Line Arguments

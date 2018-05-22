@@ -35,6 +35,7 @@ class KittenScraper():
             config = yaml.load(open(config_file, 'r'))
             self.username = config['username']
             self.password = config['password']
+            self.do_not_assign_mentor = config['do_not_assign_mentor'] if 'do_not_assign_mentor' in config else []
             return True
 
         except yaml.YAMLError as err:
@@ -73,7 +74,7 @@ class KittenScraper():
         print('Looking up person number {}...'.format(person_number))
 
         self.driver.get(self.SEARCH_URL)
-        self.driver.find_element_by_id("userid").send_keys(person_number)
+        self.driver.find_element_by_id("userid").send_keys(str(person_number))
         self.driver.find_element_by_id("userid").send_keys(webdriver.common.keys.Keys.RETURN)
 
         first_name            = self.get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtFirstName')
@@ -84,6 +85,7 @@ class KittenScraper():
         primary_email         = self.get_text_by_xpath('//*[@id="emailTable"]/tbody/tr[1]/td[1]')
         secondary_email       = self.get_text_by_xpath('//*[@id="emailTable"]/tbody/tr[2]/td[1]')
         prev_animals_fostered = self.prev_animals_fostered(person_number)
+        notes                 = '*** Do Not Assign Mentor ***' if person_number in self.do_not_assign_mentor else ''
 
         return {
             'first_name'            : first_name,
@@ -93,7 +95,8 @@ class KittenScraper():
             'cell_phone'            : cell_phone,
             'primary_email'         : primary_email,
             'secondary_email'       : secondary_email,
-            'prev_animals_fostered' : prev_animals_fostered
+            'prev_animals_fostered' : prev_animals_fostered,
+            'notes'                 : notes
         }
 
     def prev_animals_fostered(self, person_number):
@@ -199,7 +202,7 @@ class KittenReportReader:
             person_number = self.sheet.row_values(row_number)[5]
 
             if isinstance(animal_number, float): # xls stores all numbers as float
-                persons.add(str(int(person_number)))
+                persons.add((int(person_number)))
 
         return persons
 
@@ -210,7 +213,7 @@ class KittenReportReader:
             return None
 
         return datetime(*xlrd.xldate_as_tuple(xlsfloat, workbook_datemode))
-        
+
     def copy_row_as_text(self, row_number):
         ''' Output is written as csv so we need to stringify all types (dates in particular)
         '''
@@ -312,6 +315,7 @@ class KittenReportReader:
         new_rows[-1].append('Foster Experience')
         new_rows[-1].append('Date Kittens Received')	
         new_rows[-1].append('Quantity')
+        new_rows[-1].append('Notes')
 
         for row_number in range(1, self.sheet.nrows): # ignore header
             animal_type = self.sheet.row_values(row_number)[1]
@@ -335,8 +339,7 @@ class KittenReportReader:
 
             # Grab the person data from the associated person number
             #
-            person_number_str = str(int(person_number))
-            person_data = persons_data[person_number_str] if person_number_str in persons_data else {}
+            person_data = persons_data[person_number] if person_number in persons_data else {}
 
             # Build full name
             #
@@ -373,6 +376,7 @@ class KittenReportReader:
 
             animal_quantity = self.count_animals(person_number)
             prev_animals_fostered = person_data['prev_animals_fostered']
+            notes = person_data['notes']
             foster_experience = 'NEW' if not prev_animals_fostered else '{} previous'.format(prev_animals_fostered)
 
             # Since we're receiving "last 24 hour reports" I'll assume received date is the same
@@ -386,6 +390,7 @@ class KittenReportReader:
             new_rows[-1].append('"{}"'.format(foster_experience))
             new_rows[-1].append('="{}"'.format(date_received)) # using ="%s" for dates to deal with Excel auto-formatting issues
             new_rows[-1].append('"{}"'.format(animal_quantity))
+            new_rows[-1].append('"{}"'.format(notes))
 
         with open(csv_filename, 'w') as outfile:
             for row in new_rows:
@@ -419,6 +424,8 @@ if __name__ == "__main__":
     kitten_scraper = KittenScraper()
     if not kitten_scraper.load_configuration():
         sys.exit()
+
+    print('Special config (do not assign mentor): {}'.format(kitten_scraper.do_not_assign_mentor))
 
     kitten_scraper.start_browser(args.show_browser)
     kitten_scraper.login()
