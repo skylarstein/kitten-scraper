@@ -253,8 +253,10 @@ class KittenReportReader:
             else:
                 result = '{} weeks'.format(int(weeks) + int(months) * 4)
         except:
-            pass
+            result = 'Unknown Age'
 
+        #todo some age string bugs...
+        print('[{}] = [{}]'.format(age_string, result))
         return result
 
     def count_animals(self, person_number):
@@ -266,8 +268,10 @@ class KittenReportReader:
         for row_number in range(1, self.sheet.nrows): # ignore header
             a_type = self.sheet.row_values(row_number)[1]
             a_age = self.sheet.row_values(row_number)[4]
+            print('>>>> GOT AGE STRING {}'.format(a_age))
             p_number = self.sheet.row_values(row_number)[5]
 
+            #TODO: 
             if not a_type:
                 a_type = last_animal_type
             else:
@@ -279,7 +283,8 @@ class KittenReportReader:
                 # (or at least close enough in grouped litters) so that choosing one age to share won't
                 # be much of an issue
                 #
-                animals_age[a_type] = a_age
+                if a_age:
+                    animals_age[a_type] = a_age
 
         # We now have a list of all animal types. Next, create a set with total counts per type.
         #
@@ -293,7 +298,7 @@ class KittenReportReader:
         for animal in animal_counts:
             if result_str:
                 result_str += '\r'
-            age = self.pretty_print_animal_age(animals_age[animal])
+            age = self.pretty_print_animal_age(animals_age[animal] if animal in animals_age else '')
             result_str += '{} {}{} @ {}'.format(animal_counts[animal], animal, 's' if animal_counts[animal] > 1 else '', age)
 
         return result_str.lower()
