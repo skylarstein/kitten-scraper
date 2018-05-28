@@ -26,7 +26,7 @@ $ curl https://bootstrap.pypa.io/get-pip.py | sudo python
 ## Setup and Configuration
 
 ### config.yaml
-Create a text file named 'config.yaml' in the kitten-scraper directory and enter your credentials in this format:
+Create a text file named 'config.yaml' in the kitten-scraper directory and enter your credentials and configuration in this format:
 
 ```
 username : your_username
