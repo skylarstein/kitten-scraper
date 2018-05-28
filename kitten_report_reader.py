@@ -107,33 +107,43 @@ class KittenReportReader:
     def count_animals(self, person_number):
         ''' Count the number and age of each animal type assigned to this person number
         '''
-        animals = []
-        animals_age = {}
+        animal_types = []
+        animal_numbers = {}
+        animal_ages = {}
         last_animal_type = ''
         for row_number in range(1, self.sheet.nrows): # ignore header
             a_type = self.sheet.row_values(row_number)[1]
+            a_number = self.sheet.row_values(row_number)[2]
             a_age = self.sheet.row_values(row_number)[4]
             p_number = self.sheet.row_values(row_number)[5]
 
             if not a_type:
                 a_type = last_animal_type
             else:
+                a_type = a_type.encode('utf-8').strip()
                 last_animal_type = a_type
 
             if person_number == p_number:
-                animals.append(a_type)
+                animal_types.append(a_type)
                 # WARNING: Making an assumption here that same animal types will be of the same age
                 # (or at least close enough in grouped litters) so that choosing one age to share won't
-                # be much of an issue
+                # be much of an issue.
                 #
                 if a_age:
-                    animals_age[a_type] = a_age
+                    animal_ages[a_type] = a_age
+
+                if a_number:
+                    a_number = str(int(a_number))
+                    if a_type in animal_numbers:
+                        animal_numbers[a_type].append(a_number)
+                    else:
+                        animal_numbers[a_type] = [a_number]
 
         # We now have a list of all animal types. Next, create a set with total counts per type.
         #
         animal_counts = {}
-        for animal in set(animals):
-            animal_counts[animal] = animals.count(animal)
+        for animal in set(animal_types):
+            animal_counts[animal] = animal_types.count(animal)
 
         # Pretty-print results
         #
@@ -141,8 +151,9 @@ class KittenReportReader:
         for animal in animal_counts:
             if result_str:
                 result_str += '\r'
-            age = self.pretty_print_animal_age(animals_age[animal] if animal in animals_age else '')
-            result_str += '{} {}{} @ {}'.format(animal_counts[animal], animal, 's' if animal_counts[animal] > 1 else '', age)
+            age = self.pretty_print_animal_age(animal_ages[animal] if animal in animal_ages else '')
+            numbers = ', '.join(n for n in animal_numbers[animal])
+            result_str += '{} {}{} @ {} ({})'.format(animal_counts[animal], animal, 's' if animal_counts[animal] > 1 else '', age, numbers)
 
         return result_str.lower()
 
