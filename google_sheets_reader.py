@@ -1,4 +1,5 @@
 import pygsheets
+from kitten_utils import *
 
 class GoogleSheetsReader:
     def load_mentors_spreadsheet(self, sheets_key):
@@ -19,7 +20,7 @@ class GoogleSheetsReader:
 
                 self.sheet_data.append({worksheet.title : row_data})
         except Exception, e:
-            print('ERROR: Unable to load Feline Foster spreadsheet!\r\n{}'.format(str(e)))
+            print_err('ERROR: Unable to load Feline Foster spreadsheet!\r\n{}'.format(str(e)))
 
         return self.sheet_data
 

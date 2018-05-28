@@ -8,8 +8,9 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from google_sheets_reader import GoogleSheetsReader
 from kitten_report_reader import KittenReportReader
+from kitten_utils import *
 
-class KittenScraper():
+class KittenScraper:
     def __init__(self):
         pass
 
@@ -34,10 +35,10 @@ class KittenScraper():
             return True
 
         except yaml.YAMLError as err:
-            print('ERROR: Unable to parse configuration file: {}, {}'.format(config_file, err))
+            print_err('ERROR: Unable to parse configuration file: {}, {}'.format(config_file, err))
 
         except IOError as err:
-            print('ERROR: Unable to read configuration file: {}, {}'.format(config_file, err))
+            print_err('ERROR: Unable to read configuration file: {}, {}'.format(config_file, err))
 
         return False
 

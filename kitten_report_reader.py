@@ -1,6 +1,7 @@
 import re
 import xlrd
 from datetime import datetime
+from kitten_utils import *
 
 class KittenReportReader:
     ''' KittenReportReader will process process the incoming daily report, extend data with
@@ -25,14 +26,14 @@ class KittenReportReader:
                 print('ERROR: Unexpected column layout in {}'.format(xls_filename))
                 return False
 
-            print('Loaded report {}'.format(xls_filename))
+            print_success('Loaded report {}'.format(xls_filename))
             return True
 
         except IOError as err:
-            print('ERROR: Unable to read xls file: {}, {}'.format(xls_filename, err))
+            print_err('ERROR: Unable to read xls file: {}, {}'.format(xls_filename, err))
 
         except xlrd.XLRDError as err:
-            print('ERROR: Unable to read xls file: {}'.format(err.message))
+            print_err('ERROR: Unable to read xls file: {}'.format(err.message))
 
         return False
 
@@ -161,7 +162,7 @@ class KittenReportReader:
         ''' Combine the newly gathered person data with the daily report, output results
             to a new csv document.
         '''
-        print('Writing results to {}...'.format(csv_filename))
+        print_success('Writing results to {}...'.format(csv_filename))
 
         new_rows = []
 
