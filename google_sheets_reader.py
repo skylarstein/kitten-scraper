@@ -7,7 +7,7 @@ class GoogleSheetsReader:
         '''
         self.sheet_data = []
         try:
-            print('Loading mentors spreadsheet {}...'.format(sheets_key))
+            print_success('Loading mentors spreadsheet {}...'.format(sheets_key))
             gc = pygsheets.authorize(outh_file='client_secret.json')
             spreadsheet = gc.open_by_key(sheets_key)
             worksheets = spreadsheet.worksheets()

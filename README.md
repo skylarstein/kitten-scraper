@@ -22,7 +22,6 @@ or..
 $ curl https://bootstrap.pypa.io/get-pip.py | sudo python
 ```
 
-
 ## Setup and Configuration
 
 ### config.yaml
@@ -35,6 +34,7 @@ mentors_spreadsheet_key : key
 login_url : http://url
 search_url : http://url
 list_animals_url : http://url
+animal_url : http://url
 do_not_assign_mentor : 
     - 100 # special person number
     - 200 # special person number

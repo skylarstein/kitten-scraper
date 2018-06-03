@@ -30,6 +30,7 @@ class KittenScraper:
             self.password = config['password']
             self.login_url = config['login_url']
             self.search_url = config['search_url']
+            self.animal_url = config['animal_url']
             self.list_animals_url = config['list_animals_url']
             self.do_not_assign_mentor = config['do_not_assign_mentor'] if 'do_not_assign_mentor' in config else []
             return True
@@ -56,13 +57,22 @@ class KittenScraper:
     def login(self):
         ''' Load the login page, enter credentials, submit
         '''
-        print('Logging in...')
+        print_success('Logging in...')
         self.driver.get(self.login_url)
 
         self.driver.find_element_by_id("txt_username").send_keys(self.username)
         self.driver.find_element_by_id("txt_password").send_keys(self.password)
         self.driver.find_element_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_btn_login').click()
         self.driver.find_element_by_id('Continue').click()
+
+    def get_animal_foster_parents(self, animal_numbers):
+        print('Looking up foster parent IDs for each foster animal...')
+        foster_parents = {}
+        for a in animal_numbers:
+            self.driver.get(self.animal_url.format(a))
+            p = int(self.get_attr_by_xpath('href', '//*[@id="Table17"]/tbody/tr[1]/td[2]/a').split('personid=')[1])
+            foster_parents.setdefault(p, []).append(a)
+        return foster_parents
 
     def get_person_data(self, person_number, google_sheets_reader):
         ''' Search for the given person number, return details and contact information
@@ -78,8 +88,8 @@ class KittenScraper:
         preferred_name        = self.get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtPreferredName')
         home_phone            = self.get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_homePhone_txtPhone3')
         cell_phone            = self.get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_mobilePhone_txtPhone3')		
-        primary_email         = self.get_text_by_xpath('//*[@id="emailTable"]/tbody/tr[1]/td[1]')
-        secondary_email       = self.get_text_by_xpath('//*[@id="emailTable"]/tbody/tr[2]/td[1]')
+        primary_email         = self.get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[1]/td[1]')
+        secondary_email       = self.get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[2]/td[1]')
         prev_animals_fostered = self.prev_animals_fostered(person_number)
 
         full_name = preferred_name if preferred_name else first_name if first_name else ''
@@ -90,7 +100,7 @@ class KittenScraper:
         matching_sheets = google_sheets_reader.find_matches_in_feline_foster_spreadsheet([full_name, primary_email, secondary_email])
         if matching_sheets:
             notes += '\r' if len(notes) else ''
-            notes += '*** Found matching mentor(s): {}'.format(', ' .join([str(s) for s in matching_sheets]))
+            notes += '*** Found matching mentor(s): {}'.format(', '.join([str(s) for s in matching_sheets]))
 
         return {
             'first_name'            : first_name,
@@ -153,11 +163,11 @@ class KittenScraper:
         except:
             return ''
 
-    def get_text_by_xpath(self, element_xpath):
+    def get_attr_by_xpath(self, attr, element_xpath):
         ''' Quick helper function to get attribute text with proper error handling
         '''
         try:
-            return self.driver.find_element_by_xpath(element_xpath).get_attribute('innerText')
+            return self.driver.find_element_by_xpath(element_xpath).get_attribute(attr)
         except:
             return ''
 
@@ -174,14 +184,31 @@ if __name__ == "__main__":
         arg_parser.print_help()
         sys.exit(0)
 
-    # Load me up some kittens and foster parent numbers from the xls report
-    #
+    kitten_scraper = KittenScraper()
+    if not kitten_scraper.load_configuration():
+        sys.exit()
+
     kitten_report_reader = KittenReportReader()
     if not kitten_report_reader.open_xls(args.input):
         sys.exit()
 
-    persons = kitten_report_reader.get_person_numbers()
-    print('Found foster parent numbers: {}'.format(', '.join([str(person) for person in persons])))
+    print('Special config (do not assign mentor): {}'.format(', '.join(str(p) for p in kitten_scraper.do_not_assign_mentor)))
+
+    # Load the daily kitten report
+    #
+    animal_numbers = kitten_report_reader.get_animal_numbers()
+    print('Found animal {} numbers: {}'.format(len(animal_numbers), ', '.join([str(a) for a in animal_numbers])))
+
+    # If an animal has had multiple foster parents, the person ID order included in the daily kitten report
+    # may vary. The topmost ID may be the current foster parent or it may be a previous foster parent.
+    # This means we need to explicitly look up the current foster parent ID for every kitten number.
+    #
+    kitten_scraper.start_browser(args.show_browser)
+    kitten_scraper.login()
+    correct_foster_parents = kitten_scraper.get_animal_foster_parents(animal_numbers)
+
+    for p in correct_foster_parents:
+        print('Animals for foster parent {} = {}'.format(p, correct_foster_parents[p]))
 
     # Load the Feline Mentors spreadsheet
     #
@@ -189,25 +216,16 @@ if __name__ == "__main__":
     google_sheets_reader.load_mentors_spreadsheet(sheets_key='1XuZqVA7t2yGbKzcnCAsUuMW-W44L3PKreRWlSHZUYLc')
     print('Loaded {} worksheets from mentors spreadsheet'.format(len(google_sheets_reader.sheet_data)))
 
-    # Log in and query foster parent details (person number -> name and contact details)
+    # Log in and query foster parent details (person number -> name, contact details, etc)
     #
-    kitten_scraper = KittenScraper()
-    if not kitten_scraper.load_configuration():
-        sys.exit()
-
-    print('Special config (do not assign mentor): {}'.format(', '.join(str(p) for p in kitten_scraper.do_not_assign_mentor)))
-
-    kitten_scraper.start_browser(args.show_browser)
-    kitten_scraper.login()
-
     persons_data = {}
-    for person in persons:
-        persons_data[person] = kitten_scraper.get_person_data(person, google_sheets_reader)
+    for person in correct_foster_parents:
+        persons_data[str(person)] = kitten_scraper.get_person_data(person, google_sheets_reader)
 
     kitten_scraper.exit()
 
     # Output the combined results to csv
     #
-    kitten_report_reader.output_results(persons_data, args.output)
+    kitten_report_reader.output_results(persons_data, correct_foster_parents, args.output)
 
     print('\nKitten scraping completed in {0:.3f} seconds'.format(time.time() - start_time))
