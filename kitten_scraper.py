@@ -33,6 +33,7 @@ class KittenScraper:
             self.animal_url = config['animal_url']
             self.list_animals_url = config['list_animals_url']
             self.do_not_assign_mentor = config['do_not_assign_mentor'] if 'do_not_assign_mentor' in config else []
+            self.mentors = config['mentors'] if 'mentors' in config else []
             return True
 
         except yaml.YAMLError as err:
@@ -96,12 +97,15 @@ class KittenScraper:
         full_name += ' ' if len(full_name) else ''
         full_name += last_name if last_name else ''
 
-        notes = '*** Do Not Assign Mentor' if person_number in self.do_not_assign_mentor else ''
+        notes = '*** Do not assign mentor (HSSV Staff)' if person_number in self.do_not_assign_mentor else ''
+        if person_number in self.mentors:
+            notes += '{}*** {} is a mentor'.format('\r' if len(notes) else '', full_name)
+
         matching_sheets = google_sheets_reader.find_matches_in_feline_foster_spreadsheet([full_name, primary_email, secondary_email])
         if matching_sheets:
-            notes += '\r' if len(notes) else ''
-            notes += '*** Found matching mentor(s): {}'.format(', '.join([str(s) for s in matching_sheets]))
-
+            notes += '{}*** Found matching mentor{}: {}'.format('\r' if len(notes) else '',
+                                                                's' if len(matching_sheets) > 1 else '',
+                                                                ', '.join([str(s) for s in matching_sheets]))
         return {
             'first_name'            : first_name,
             'last_name'             : last_name,
