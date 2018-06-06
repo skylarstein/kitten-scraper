@@ -113,7 +113,7 @@ class KittenReportReader:
 
             a_type = self.sheet.row_values(row_number)[1]
             a_age = self.sheet.row_values(row_number)[4]
-            p_number = next(p for p in correct_foster_parents if a_number in correct_foster_parents[p])
+            p_number = next((p for p in correct_foster_parents if a_number in correct_foster_parents[p]), None)
 
             if not a_type:
                 a_type = last_animal_type
@@ -176,7 +176,6 @@ class KittenReportReader:
         for row_number in range(1, self.sheet.nrows): # ignore header
             animal_type = self.sheet.row_values(row_number)[1]
             animal_number = int(self.sheet.row_values(row_number)[2] or 0)
-            #orig_person_number = int(self.sheet.row_values(row_number)[5])
             status_datetime = self.xlsfloat_as_datetime(self.sheet.row_values(row_number)[0], self.workbook.datemode)
 
             # If there is no animal number, skip the entire row
@@ -188,7 +187,7 @@ class KittenReportReader:
             #
             new_rows.append(self.copy_row_as_text(row_number))
 
-            corrected_person_number = next(p for p in correct_foster_parents if animal_number in correct_foster_parents[p])
+            corrected_person_number = next((p for p in correct_foster_parents if animal_number in correct_foster_parents[p]), 'UNKNOWN')
             new_rows[-1].append('"{}"'.format(corrected_person_number))
 
             # Only include extended person details for rows with 'Current Animal Type' and 'Status Update'
@@ -198,12 +197,16 @@ class KittenReportReader:
 
             # Grab the person data from the associated person number
             #
-            person_data = persons_data[str(corrected_person_number)]
-            name = person_data['full_name'] if 'preferred_name' in person_data else ''
+            person_data = persons_data[str(corrected_person_number)] if str(corrected_person_number) in persons_data else {}
+            name = person_data['full_name'] if 'full_name' in person_data else ''
             animal_quantity = self.count_animals(corrected_person_number, correct_foster_parents)
-            prev_animals_fostered = person_data['prev_animals_fostered']
-            notes = person_data['notes']
-            foster_experience = 'NEW' if not prev_animals_fostered else '{} previous'.format(prev_animals_fostered)
+            prev_animals_fostered = person_data['prev_animals_fostered'] if 'prev_animals_fostered' in person_data else None
+            notes = person_data['notes'] if 'notes' in person_data else ''
+
+            if prev_animals_fostered is not None:
+                foster_experience = 'NEW' if not prev_animals_fostered else '{} previous'.format(prev_animals_fostered)
+            else:
+                foster_experience = ''
 
             # Build phone number(s) string
             #

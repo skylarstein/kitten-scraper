@@ -71,8 +71,11 @@ class KittenScraper:
         foster_parents = {}
         for a in animal_numbers:
             self.driver.get(self.animal_url.format(a))
-            p = int(self.get_attr_by_xpath('href', '//*[@id="Table17"]/tbody/tr[1]/td[2]/a').split('personid=')[1])
-            foster_parents.setdefault(p, []).append(a)
+            try:
+                p = int(self.get_attr_by_xpath('href', '//*[@id="Table17"]/tbody/tr[1]/td[2]/a').split('personid=')[1])
+                foster_parents.setdefault(p, []).append(a)
+            except:
+                print_err('Failed to find foster parent for animal {}, please check report'.format(a))
         return foster_parents
 
     def get_person_data(self, person_number, google_sheets_reader):
