@@ -1,8 +1,17 @@
-# Welcome to the Kitten Scraper
+```
+                                                                     _                ___       _.--.
+  _  ___ _   _               ____                                    \`.|\..----...-'`   `-._.-'_.-'`
+ | |/ (_) |_| |_ ___ _ __   / ___|  ___ _ __ __ _ _ __   ___ _ __    /  ' `         ,       __.-'    
+ | ' /| | __| __/ _ \ '_ \  \___ \ / __| '__/ _` | '_ \ / _ \ '__|   )/' _/     \   `-_,   /         
+ | . \| | |_| ||  __/ | | |  ___) | (__| | | (_| | |_) |  __/ |      `-'" `"\_  ,_.-;_.-\_ ',        
+ |_|\_\_|\__|\__\___|_| |_| |____/ \___|_|  \__,_| .__/ \___|_|          _.-'_./   {_.'   ; /        
+                                                 |_|                    {_.-``-'         {_/         
+```
 
 ![](https://img.shields.io/badge/platform-macOS-brightgreen.svg)
 ![](https://img.shields.io/badge/Python-2.7.x,%203.6.x-brightgreen.svg)
 
+### Kitten Scraper. A little bit of web scraping to automate feline foster reports.
 ## Clone the Repository and Install Dependencies
 
 Optionally (instead of git clone), you can [download the zip archive](https://github.com/skylarstein/kitten-scraper/archive/master.zip)
@@ -38,10 +47,13 @@ animal_url : http://url
 do_not_assign_mentor : 
     - 100 # special person number
     - 200 # special person number
+mentors :
+    - 8888 # feline foster mentor number
+    - 9999 # feline foster mentor number
 ```
 ### client_secret.json
 
-For Google Sheets integration and Google Sheets API platform access, copy your client_secret.json file to the kitten-scraper directory.
+Google Sheets integration and Google Sheets API platform access will require a 'client_secret.json' file. [Instructions by pygsheets](https://pygsheets.readthedocs.io/en/latest/authorizing.html) will assist you in creating this file. Copy 'client_secret.json' to the kitten-scraper directory.
 
 ## Command Line Arguments
 
