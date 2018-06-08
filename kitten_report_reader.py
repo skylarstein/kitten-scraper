@@ -16,6 +16,10 @@ class KittenReportReader:
             self.workbook = xlrd.open_workbook(xls_filename)
             self.sheet = self.workbook.sheet_by_index(0)
 
+            if not self.sheet.nrows:
+                print_err('ERROR: I\'m afraid you have an empty report: {}'.format(xls_filename))
+                return False
+
             if (self.sheet.row_values(0)[0] != 'Datetime of Current Status Date' or
                 self.sheet.row_values(0)[1] != 'Current Animal Type' or
                 self.sheet.row_values(0)[2] != 'AnimalID' or
@@ -23,7 +27,7 @@ class KittenReportReader:
                 self.sheet.row_values(0)[4] != 'Age' or
                 self.sheet.row_values(0)[5] != 'Foster Parent ID'):
 
-                print('ERROR: Unexpected column layout in {}'.format(xls_filename))
+                print_err('ERROR: Unexpected column layout in the report. Something unexpected has changed! {}'.format(xls_filename))
                 return False
 
             print_success('Loaded report {}'.format(xls_filename))
