@@ -1,9 +1,9 @@
 # A little bit of web scraping to automate Feline Foster reports
 
-![Platform macOS](https://img.shields.io/badge/platform-macOS-brightgreen.svg)
-![Python 2.7.x, Python 3.6.x](https://img.shields.io/badge/Python-2.7.x,%203.6.x-brightgreen.svg)
+![Platform macOS | Linux](https://img.shields.io/badge/platform-macOS%20|%20Linux-brightgreen.svg)
+![Python 2.7.x | Python 3.6.x](https://img.shields.io/badge/Python-2.7.x%20|%203.6.x-brightgreen.svg)
 
-Kitten-scraper will import the daily Feline Foster xls report, automatically populate additional information for each animal and foster parent, and match foster parents to their existing Feline Foster Mentors
+Kitten-scraper will import the daily Feline Foster xls report, automatically populate additional information for each animal and foster parent, and match foster parents to their existing Feline Foster Mentors.
 
 ```text
                                                                      _                ___       _.--.
@@ -17,7 +17,7 @@ Kitten-scraper will import the daily Feline Foster xls report, automatically pop
 
 ## Clone the Repository and Install Dependencies
 
-Optionally (instead of git clone), you can [download the zip archive](https://github.com/skylarstein/kitten-scraper/archive/master.zip)
+Clone the repository from the command line or optionally [download the zip archive](https://github.com/skylarstein/kitten-scraper/archive/master.zip). Performing 'pip install -r requirements.txt' from the command line is required in either case.
 
 ```text
 $ git clone https://github.com/skylarstein/kitten-scraper.git kitten-scraper

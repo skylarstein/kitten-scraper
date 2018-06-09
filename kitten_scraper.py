@@ -46,7 +46,14 @@ class KittenScraper(object):
         if not show_browser:
             chrome_options.add_argument("--headless")
 
-        chromedriver_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'bin/mac64/chromedriver')
+        if sys.platform == 'darwin':
+            chromedriver_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'bin/mac64/chromedriver')
+        elif sys.platform.startswith('linux'):
+            chromedriver_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'bin/linux64/chromedriver')
+        else:
+            print_err('Sorry friends, I haven\'t included chromedriver for your platform ({}). Exiting now.'.format(sys.platform))
+            sys.exit(0)
+
         self._driver = webdriver.Chrome(chromedriver_path, chrome_options = chrome_options)
 
     def exit_browser(self):
