@@ -198,6 +198,12 @@ if __name__ == "__main__":
     if not kitten_report_reader.open_xls(args.input):
         sys.exit()
 
+    # Assure output path exists
+    #
+    output_path = os.path.dirname(args.output)
+    if output_path and not os.path.exists(output_path):
+        os.makedirs(output_path)
+
     # Load the daily kitten report
     #
     animal_numbers = kitten_report_reader.get_animal_numbers()
