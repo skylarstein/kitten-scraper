@@ -4,6 +4,7 @@ import time
 import yaml
 from argparse import ArgumentParser
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from google_sheets_reader import GoogleSheetsReader
@@ -58,12 +59,19 @@ class KittenScraper(object):
         ''' Load the login page, enter credentials, submit
         '''
         print_success('Logging in...')
-        self._driver.get(self._login_url)
+
+        try:
+            self._driver.set_page_load_timeout(20)
+            self._driver.get(self._login_url)
+        except TimeoutException:
+            print_err('ERROR: Unable to load login page. Please check your connection.')
+            return False
 
         self._driver.find_element_by_id("txt_username").send_keys(self._username)
         self._driver.find_element_by_id("txt_password").send_keys(self._password)
         self._driver.find_element_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_btn_login').click()
         self._driver.find_element_by_id('Continue').click()
+        return True
 
     def get_animal_foster_parents(self, animal_numbers):
         print('Looking up foster parent IDs for each foster animal...')
@@ -214,7 +222,9 @@ if __name__ == "__main__":
     # This means we need to explicitly look up the current foster parent ID for every kitten number.
     #
     kitten_scraper.start_browser(args.show_browser)
-    kitten_scraper.login()
+    if not kitten_scraper.login():
+        sys.exit()
+
     correct_foster_parents = kitten_scraper.get_animal_foster_parents(animal_numbers)
 
     for p in correct_foster_parents:
