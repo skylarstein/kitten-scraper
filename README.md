@@ -80,7 +80,7 @@ optional arguments:
 
 ## Let's Do This
 
-To generate a report, run kittens-scraper.py from the command line. Specify the path to the original feline foster report xls (-i) as well as the desired output file name (-o).
+To generate a report, run kitten-scraper.py from the command line. Specify the path to the original feline foster report xls (-i) as well as the desired output file name (-o).
 
 ```text
 $ python kitten-scraper.py -i /Users/skylar/KittenData/FosterReport-May12.xls -o /Users/skylar/KittenData/UpdatedFosterReport-May12.csv

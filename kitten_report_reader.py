@@ -79,6 +79,7 @@ class KittenReportReader(object):
         new_rows[-1].append('Quantity')
         new_rows[-1].append('Notes')
 
+        processed_p_numbers = []
         for row_number in range(1, self._sheet.nrows): # ignore header
             animal_type = self._sheet.row_values(row_number)[self.__ANIMAL_TYPE_COL]
             animal_number = int(self._sheet.row_values(row_number)[self.__ANIMAL_ID_COL] or 0)
@@ -96,10 +97,12 @@ class KittenReportReader(object):
             corrected_person_number = next((p for p in correct_foster_parents if animal_number in correct_foster_parents[p]), 'UNKNOWN')
             new_rows[-1].append('"{}"'.format(corrected_person_number))
 
-            # Only include extended person details for rows with 'Current Animal Type' and 'Status Update'
+            # Only include an extended details row once per foster parent
             #
-            if not animal_type or not status_datetime:
+            if corrected_person_number in processed_p_numbers:
                 continue
+            else:
+                processed_p_numbers.append(corrected_person_number)
 
             # Grab the person data from the associated person number
             #
@@ -138,8 +141,7 @@ class KittenReportReader(object):
                     email += '\r'
                 email += secondary_email
 
-            # Since we're receiving "last 24 hour reports" I'll assume received date is the same
-            # day as the status date
+            # Since the reports cover "last 24 hours" I'll assume received date is the same day as the status date
             #
             date_received = status_datetime.strftime('%d-%b-%Y') if status_datetime else ''
 
@@ -190,22 +192,28 @@ class KittenReportReader(object):
     def _pretty_print_animal_age(self, age_string):
         ''' Expecting an age string in the format '%d years %d months %d weeks'
         '''
-        result = ''
+        pretty_age_string = ''
+        animal_type = ''
         try:
             # For the sake of brevity in the spreadsheet, I'll shorten the age string when I can.
-            # For example, if an animal is > 1 year old, there is no need to include months and weeks.
+            # For example, if an animal is > 1 year old, there's no huge need to include months and weeks.
+            # I'll also return an animal_type string ['kitten', 'cat'] based on age since daily reports
+            # occasionally fail to include this information.
             #
             (years, months, weeks) = re.search(r'(\d+) years (\d+) months (\d+) weeks', age_string).groups()
             if int(years) > 0:
-                result = '{} years'.format(years)
+                pretty_age_string = '{} years'.format(years)
+                animal_type = 'cat'
             elif int(months) >= 3:
-                result = '{} months'.format(months)
+                pretty_age_string = '{} months'.format(months)
+                animal_type = 'kitten' if int(months) <= 6 else 'cat'
             else:
-                result = '{} weeks'.format(int(weeks) + int(months) * 4)
+                pretty_age_string = '{} weeks'.format(int(weeks) + int(months) * 4)
+                animal_type = 'kitten'
         except:
-            result = 'Unknown Age'
+            pretty_age_string = 'Unknown Age'
 
-        return result
+        return pretty_age_string, animal_type
 
     def _count_animals(self, person_number, correct_foster_parents):
         ''' Count the number and age of each animal type assigned to this person number
@@ -255,8 +263,9 @@ class KittenReportReader(object):
         for animal in animal_counts:
             if result_str:
                 result_str += '\r'
-            age = self._pretty_print_animal_age(animal_ages[animal] if animal in animal_ages else '')
+            age, animal_type = self._pretty_print_animal_age(animal_ages[animal] if animal in animal_ages else '')
             numbers = ', '.join(str(a) for a in animal_numbers[animal])
-            result_str += '{} {}{} @ {} ({})'.format(animal_counts[animal], animal, 's' if animal_counts[animal] > 1 else '', age, numbers)
+            animal_type = animal if len(animal) else animal_type # dealing with blank animal types in some foster reports
+            result_str += '{} {}{} @ {} ({})'.format(animal_counts[animal], animal_type, 's' if animal_counts[animal] > 1 else '', age, numbers)
 
         return result_str.lower()

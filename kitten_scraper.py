@@ -46,6 +46,8 @@ class KittenScraper(object):
         if not show_browser:
             chrome_options.add_argument("--headless")
 
+        # TODO: Consider adding chromedriver-binary or chromedriver_installer to requirements.txt and
+        # removing these local copies...
         if sys.platform == 'darwin':
             chromedriver_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'bin/mac64/chromedriver')
         elif sys.platform.startswith('linux'):
@@ -71,7 +73,7 @@ class KittenScraper(object):
             self._driver.set_page_load_timeout(20)
             self._driver.get(self._login_url)
         except TimeoutException:
-            print_err('ERROR: Unable to load login page. Please check your connection.')
+            print_err('ERROR: Unable to load the login page. Please check your connection.')
             return False
 
         self._driver.find_element_by_id("txt_username").send_keys(self._username)
@@ -224,14 +226,14 @@ if __name__ == "__main__":
     animal_numbers = kitten_report_reader.get_animal_numbers()
     print('Found animal {} numbers: {}'.format(len(animal_numbers), ', '.join([str(a) for a in animal_numbers])))
 
-    # If an animal has had multiple foster parents, the person ID order included in the daily kitten report
-    # may vary. The topmost ID may be the current foster parent or it may be a previous foster parent.
-    # This means we need to explicitly look up the current foster parent ID for every kitten number.
-    #
     kitten_scraper.start_browser(args.show_browser)
     if not kitten_scraper.login():
         sys.exit()
 
+    # If an animal has had multiple foster parents, the order of associated person IDs may vary per report.
+    # The topmost ID may be the current foster parent, or it may be a previous foster parent. This means we
+    # need to explicitly look up the current foster parent ID for every kitten number.
+    #
     correct_foster_parents = kitten_scraper.get_animal_foster_parents(animal_numbers)
 
     for p in correct_foster_parents:
@@ -254,4 +256,4 @@ if __name__ == "__main__":
     #
     kitten_report_reader.output_results(persons_data, correct_foster_parents, args.output)
 
-    print('\nKitten scraping completed in {0:.3f} seconds'.format(time.time() - start_time))
+    print('\nKitten foster report completed in {0:.3f} seconds'.format(time.time() - start_time))
