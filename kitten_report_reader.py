@@ -3,27 +3,38 @@ import xlrd
 from datetime import datetime
 from kitten_utils import *
 
-class KittenReportReader:
+class KittenReportReader(object):
     ''' KittenReportReader will process process the incoming daily report, extend data with
         additional provided details, and output new results to csv
     '''
 
+    def __init__(self):
+        self.__STATUS_DATE_COL = 0
+        self.__ANIMAL_TYPE_COL = 1
+        self.__ANIMAL_ID_COL = 2
+        self.__ANIMAL_NAME_COL = 3
+        self.__ANIMAL_AGE_COL = 4
+        self.__FOSTER_PARENT_ID_COL = 5
+
     def open_xls(self, xls_filename):
-        ''' Open the daily report xls, perform some basic validation to make sure everything
-            is in place.
+        ''' Open the daily report xls, perform some basic validation to make sure everything is in place.
         '''
         try:
-            self.workbook = xlrd.open_workbook(xls_filename)
-            self.sheet = self.workbook.sheet_by_index(0)
+            self._workbook = xlrd.open_workbook(xls_filename)
+            self._sheet = self._workbook.sheet_by_index(0)
 
-            if (self.sheet.row_values(0)[0] != 'Datetime of Current Status Date' or
-                self.sheet.row_values(0)[1] != 'Current Animal Type' or
-                self.sheet.row_values(0)[2] != 'AnimalID' or
-                self.sheet.row_values(0)[3] != 'Animal Name' or
-                self.sheet.row_values(0)[4] != 'Age' or
-                self.sheet.row_values(0)[5] != 'Foster Parent ID'):
+            if not self._sheet.nrows:
+                print_err('ERROR: I\'m afraid you have an empty report: {}'.format(xls_filename))
+                return False
 
-                print('ERROR: Unexpected column layout in {}'.format(xls_filename))
+            if (self._sheet.row_values(0)[self.__STATUS_DATE_COL] != 'Datetime of Current Status Date' or
+                self._sheet.row_values(0)[self.__ANIMAL_TYPE_COL] != 'Current Animal Type' or
+                self._sheet.row_values(0)[self.__ANIMAL_ID_COL] != 'AnimalID' or
+                self._sheet.row_values(0)[self.__ANIMAL_NAME_COL] != 'Animal Name' or
+                self._sheet.row_values(0)[self.__ANIMAL_AGE_COL] != 'Age' or
+                self._sheet.row_values(0)[self.__FOSTER_PARENT_ID_COL] != 'Foster Parent ID'):
+
+                print_err('ERROR: Unexpected column layout in the report. Something unexpected has changed! {}'.format(xls_filename))
                 return False
 
             print_success('Loaded report {}'.format(xls_filename))
@@ -41,14 +52,113 @@ class KittenReportReader:
         ''' Return a set of animal numbers found in the daily report
         '''
         animal_numbers = set()
-        for row_number in range(1, self.sheet.nrows):
-            animal_number = self.sheet.row_values(row_number)[2]
+        for row_number in range(1, self._sheet.nrows):
+            animal_number = self._sheet.row_values(row_number)[self.__ANIMAL_ID_COL]
             if isinstance(animal_number, float): # xls stores all numbers as float
                 animal_numbers.add((int(animal_number)))
 
         return animal_numbers
 
-    def xlsfloat_as_datetime(self, xlsfloat, workbook_datemode):
+    def output_results(self, persons_data, correct_foster_parents, csv_filename):
+        ''' Combine the newly gathered person data with the daily report, output results
+            to a new csv document.
+        '''
+        print_success('Writing results to {}...'.format(csv_filename))
+
+        # First include the original column headers, then add columns for our new data
+        #
+        new_rows = []
+        new_rows.append(self._sheet.row_values(0))
+
+        new_rows[-1].append('Correct Foster Parent ID')
+        new_rows[-1].append('Name')
+        new_rows[-1].append('E-mail')
+        new_rows[-1].append('Phone')
+        new_rows[-1].append('Foster Experience')
+        new_rows[-1].append('Date Kittens Received')
+        new_rows[-1].append('Quantity')
+        new_rows[-1].append('Notes')
+
+        processed_p_numbers = []
+        for row_number in range(1, self._sheet.nrows): # ignore header
+            animal_type = self._sheet.row_values(row_number)[self.__ANIMAL_TYPE_COL]
+            animal_number = int(self._sheet.row_values(row_number)[self.__ANIMAL_ID_COL] or 0)
+            status_datetime = self._xlsfloat_as_datetime(self._sheet.row_values(row_number)[self.__STATUS_DATE_COL], self._workbook.datemode)
+
+            # If there is no animal number, skip the entire row
+            #
+            if not animal_number:
+                continue
+
+            # Include original column data as text since we're building a CSV document
+            #
+            new_rows.append(self._copy_row_as_text(row_number))
+
+            corrected_person_number = next((p for p in correct_foster_parents if animal_number in correct_foster_parents[p]), 'UNKNOWN')
+            new_rows[-1].append('"{}"'.format(corrected_person_number))
+
+            # Only include an extended details row once per foster parent
+            #
+            if corrected_person_number in processed_p_numbers:
+                continue
+            else:
+                processed_p_numbers.append(corrected_person_number)
+
+            # Grab the person data from the associated person number
+            #
+            person_data = persons_data[str(corrected_person_number)] if str(corrected_person_number) in persons_data else {}
+            name = person_data['full_name'] if 'full_name' in person_data else ''
+            animal_quantity = self._count_animals(corrected_person_number, correct_foster_parents)
+            prev_animals_fostered = person_data['prev_animals_fostered'] if 'prev_animals_fostered' in person_data else None
+            notes = person_data['notes'] if 'notes' in person_data else ''
+
+            if prev_animals_fostered is not None:
+                foster_experience = 'NEW' if not prev_animals_fostered else '{} previous'.format(prev_animals_fostered)
+            else:
+                foster_experience = ''
+
+            # Build phone number(s) string
+            #
+            cell_number = person_data['cell_phone'] if 'cell_phone' in person_data else ''
+            home_number = person_data['home_phone'] if 'home_phone' in person_data else ''
+
+            phone = ''
+            if len(cell_number) >= 10: # ignore incomplete phone numbers
+                phone = 'c: {}'.format(cell_number)
+
+            if len(home_number) >= 10: # ignore incomplete phone numbers
+                if len(phone):
+                    phone += '\r'
+                phone += 'h: {}'.format(home_number)
+
+            # Build email(s) string
+            #
+            email = person_data['primary_email'] if 'primary_email' in person_data else ''
+            secondary_email = person_data['secondary_email'] if 'secondary_email' in person_data else ''
+
+            if len(secondary_email):
+                if len(email):
+                    email += '\r'
+                email += secondary_email
+
+            # Since the reports cover "last 24 hours" I'll assume received date is the same day as the status date
+            #
+            date_received = status_datetime.strftime('%d-%b-%Y') if status_datetime else ''
+
+            new_rows[-1].append('"{}"'.format(name))
+            new_rows[-1].append('"{}"'.format(email))
+            new_rows[-1].append('"{}"'.format(phone))
+            new_rows[-1].append('"{}"'.format(foster_experience))
+            new_rows[-1].append('="{}"'.format(date_received)) # using ="%s" for dates to deal with Excel auto-formatting issues
+            new_rows[-1].append('"{}"'.format(animal_quantity))
+            new_rows[-1].append('"{}"'.format(notes))
+
+        with open(csv_filename, 'w') as outfile:
+            for row in new_rows:
+                outfile.write(','.join(row))
+                outfile.write('\n')
+
+    def _xlsfloat_as_datetime(self, xlsfloat, workbook_datemode):
         ''' Convert Excel float date type to datetime
         '''
         if not xlsfloat:
@@ -56,69 +166,75 @@ class KittenReportReader:
 
         return datetime(*xlrd.xldate_as_tuple(xlsfloat, workbook_datemode))
 
-    def copy_row_as_text(self, row_number):
+    def _copy_row_as_text(self, row_number):
         ''' Output is written as csv so we need to stringify all types (dates in particular)
         '''
         values = []
-        for col_number in range(0, len(self.sheet.row_values(row_number))):
-            cell_type = self.sheet.cell_type(row_number, col_number)
+        for col_number in range(0, len(self._sheet.row_values(row_number))):
+            cell_type = self._sheet.cell_type(row_number, col_number)
 
             if cell_type == xlrd.XL_CELL_DATE:
-                dt = self.xlsfloat_as_datetime(self.sheet.row_values(row_number)[col_number], self.workbook.datemode)
+                dt = self._xlsfloat_as_datetime(self._sheet.row_values(row_number)[col_number], self._workbook.datemode)
                 # wrapping datestr in ="%s" to deal with Excel auto-formatting issues
                 values.append(dt.strftime('="%d-%b-%Y %-I:%M %p"'))
 
             elif cell_type == xlrd.XL_CELL_NUMBER:
-                values.append(str(int(self.sheet.row_values(row_number)[col_number])))
+                values.append(str(int(self._sheet.row_values(row_number)[col_number])))
 
             else:
-                s = str(self.sheet.row_values(row_number)[col_number])
+                s = str(self._sheet.row_values(row_number)[col_number])
                 if s == "null":
                     s = ''
                 values.append('"{}"'.format(s))
 
         return values
 
-    def pretty_print_animal_age(self, age_string):
+    def _pretty_print_animal_age(self, age_string):
         ''' Expecting an age string in the format '%d years %d months %d weeks'
         '''
-        result = ''
+        pretty_age_string = ''
+        animal_type = ''
         try:
             # For the sake of brevity in the spreadsheet, I'll shorten the age string when I can.
-            # For example, if an animal is > 1 year old, there is no need to include months and weeks.
+            # For example, if an animal is > 1 year old, there's no huge need to include months and weeks.
+            # I'll also return an animal_type string ['kitten', 'cat'] based on age since daily reports
+            # occasionally fail to include this information.
             #
             (years, months, weeks) = re.search(r'(\d+) years (\d+) months (\d+) weeks', age_string).groups()
             if int(years) > 0:
-                result = '{} years'.format(years)
+                pretty_age_string = '{} years'.format(years)
+                animal_type = 'cat'
             elif int(months) >= 3:
-                result = '{} months'.format(months)
+                pretty_age_string = '{} months'.format(months)
+                animal_type = 'kitten' if int(months) <= 6 else 'cat'
             else:
-                result = '{} weeks'.format(int(weeks) + int(months) * 4)
+                pretty_age_string = '{} weeks'.format(int(weeks) + int(months) * 4)
+                animal_type = 'kitten'
         except:
-            result = 'Unknown Age'
+            pretty_age_string = 'Unknown Age'
 
-        return result
+        return pretty_age_string, animal_type
 
-    def count_animals(self, person_number, correct_foster_parents):
+    def _count_animals(self, person_number, correct_foster_parents):
         ''' Count the number and age of each animal type assigned to this person number
         '''
         animal_types = []
         animal_numbers = {}
         animal_ages = {}
         last_animal_type = ''
-        for row_number in range(1, self.sheet.nrows): # ignore header
-            a_number = int(self.sheet.row_values(row_number)[2] or 0)
+        for row_number in range(1, self._sheet.nrows): # ignore header
+            a_number = int(self._sheet.row_values(row_number)[self.__ANIMAL_ID_COL] or 0)
             if not a_number:
                 continue
 
-            a_type = self.sheet.row_values(row_number)[1]
-            a_age = self.sheet.row_values(row_number)[4]
-            p_number = next(p for p in correct_foster_parents if a_number in correct_foster_parents[p])
+            a_type = self._sheet.row_values(row_number)[self.__ANIMAL_TYPE_COL]
+            a_age = self._sheet.row_values(row_number)[self.__ANIMAL_AGE_COL]
+            p_number = next((p for p in correct_foster_parents if a_number in correct_foster_parents[p]), None)
 
             if not a_type:
                 a_type = last_animal_type
             else:
-                a_type = a_type.encode('utf-8').strip()
+                a_type = utf8(a_type)
                 last_animal_type = a_type
 
             if person_number == p_number:
@@ -147,102 +263,9 @@ class KittenReportReader:
         for animal in animal_counts:
             if result_str:
                 result_str += '\r'
-            age = self.pretty_print_animal_age(animal_ages[animal] if animal in animal_ages else '')
+            age, animal_type = self._pretty_print_animal_age(animal_ages[animal] if animal in animal_ages else '')
             numbers = ', '.join(str(a) for a in animal_numbers[animal])
-            result_str += '{} {}{} @ {} ({})'.format(animal_counts[animal], animal, 's' if animal_counts[animal] > 1 else '', age, numbers)
+            animal_type = animal if len(animal) else animal_type # dealing with blank animal types in some foster reports
+            result_str += '{} {}{} @ {} ({})'.format(animal_counts[animal], animal_type, 's' if animal_counts[animal] > 1 else '', age, numbers)
 
         return result_str.lower()
-
-    def output_results(self, persons_data, correct_foster_parents, csv_filename):
-        ''' Combine the newly gathered person data with the daily report, output results
-            to a new csv document.
-        '''
-        print_success('Writing results to {}...'.format(csv_filename))
-
-        # First include the original column headers, then add columns for our new data
-        #
-        new_rows = []
-        new_rows.append(self.sheet.row_values(0))
-
-        new_rows[-1].append('Correct Foster Parent ID')
-        new_rows[-1].append('Name')
-        new_rows[-1].append('E-mail')
-        new_rows[-1].append('Phone')
-        new_rows[-1].append('Foster Experience')
-        new_rows[-1].append('Date Kittens Received')	
-        new_rows[-1].append('Quantity')
-        new_rows[-1].append('Notes')
-
-        for row_number in range(1, self.sheet.nrows): # ignore header
-            animal_type = self.sheet.row_values(row_number)[1]
-            animal_number = int(self.sheet.row_values(row_number)[2] or 0)
-            #orig_person_number = int(self.sheet.row_values(row_number)[5])
-            status_datetime = self.xlsfloat_as_datetime(self.sheet.row_values(row_number)[0], self.workbook.datemode)
-
-            # If there is no animal number, skip the entire row
-            #
-            if not animal_number:
-                continue
-
-            # Include original column data as text since we're building a CSV document
-            #
-            new_rows.append(self.copy_row_as_text(row_number))
-
-            corrected_person_number = next(p for p in correct_foster_parents if animal_number in correct_foster_parents[p])
-            new_rows[-1].append('"{}"'.format(corrected_person_number))
-
-            # Only include extended person details for rows with 'Current Animal Type' and 'Status Update'
-            #
-            if not animal_type or not status_datetime:
-                continue
-
-            # Grab the person data from the associated person number
-            #
-            person_data = persons_data[str(corrected_person_number)]
-            name = person_data['full_name'] if 'preferred_name' in person_data else ''
-            animal_quantity = self.count_animals(corrected_person_number, correct_foster_parents)
-            prev_animals_fostered = person_data['prev_animals_fostered']
-            notes = person_data['notes']
-            foster_experience = 'NEW' if not prev_animals_fostered else '{} previous'.format(prev_animals_fostered)
-
-            # Build phone number(s) string
-            #
-            cell_number = person_data['cell_phone'] if 'cell_phone' in person_data else ''
-            home_number = person_data['home_phone'] if 'home_phone' in person_data else ''
-
-            phone = ''
-            if len(cell_number) >= 10: # ignore incomplete phone numbers
-                phone = 'c: {}'.format(cell_number)
-
-            if len(home_number) >= 10: # ignore incomplete phone numbers
-                if len(phone):
-                    phone += '\r'
-                phone += 'h: {}'.format(home_number)
-
-            # Build email(s) string
-            #
-            email = person_data['primary_email'] if 'primary_email' in person_data else ''
-            secondary_email = person_data['secondary_email'] if 'secondary_email' in person_data else ''
-
-            if len(secondary_email):
-                if len(email):
-                    email += '\r'
-                email += secondary_email
-
-            # Since we're receiving "last 24 hour reports" I'll assume received date is the same
-            # day as the status date
-            #
-            date_received = status_datetime.strftime('%d-%b-%Y') if status_datetime else ''
-
-            new_rows[-1].append('"{}"'.format(name))
-            new_rows[-1].append('"{}"'.format(email))
-            new_rows[-1].append('"{}"'.format(phone))
-            new_rows[-1].append('"{}"'.format(foster_experience))
-            new_rows[-1].append('="{}"'.format(date_received)) # using ="%s" for dates to deal with Excel auto-formatting issues
-            new_rows[-1].append('"{}"'.format(animal_quantity))
-            new_rows[-1].append('"{}"'.format(notes))
-
-        with open(csv_filename, 'w') as outfile:
-            for row in new_rows:
-                outfile.write(','.join(row))
-                outfile.write('\n')

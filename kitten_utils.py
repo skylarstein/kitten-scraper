@@ -1,4 +1,4 @@
-class Colors:
+class ConsoleFormat(object):
     SUCCESS   = '\033[92m'
     WARNING   = '\033[93m'
     ERROR     = '\033[91m'
@@ -7,10 +7,13 @@ class Colors:
     END       = '\033[0m'
 
 def print_success(msg):
-    print('{}{}{}'.format(Colors.SUCCESS, msg, Colors.END))
+    print('{}{}{}'.format(ConsoleFormat.SUCCESS, msg, ConsoleFormat.END))
 
 def print_warn(msg):
-    print('{}{}{}'.format(Colors.WARNING, msg, Colors.END))
+    print('{}{}{}'.format(ConsoleFormat.WARNING, msg, ConsoleFormat.END))
 
 def print_err(msg):
-    print('{}{}{}'.format(Colors.ERROR, msg, Colors.END))
+    print('{}{}{}'.format(ConsoleFormat.ERROR, msg, ConsoleFormat.END))
+
+def utf8(strval):
+    return strval.encode('utf-8').strip()

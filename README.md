@@ -1,33 +1,49 @@
-# Welcome to the Kitten Scraper
+# A little bit of web scraping to automate Feline Foster reports
 
-![](https://img.shields.io/badge/platform-macOS-brightgreen.svg)
-![](https://img.shields.io/badge/Python-2.7.x,%203.6.x-brightgreen.svg)
+![Platform macOS | Linux](https://img.shields.io/badge/platform-macOS%20|%20Linux-brightgreen.svg)
+![Python 2.7.x | Python 3.6.x](https://img.shields.io/badge/Python-2.7.x%20|%203.6.x-brightgreen.svg)
+
+Kitten-scraper will import the daily Feline Foster xls report, automatically populate additional information for each animal and foster parent, and match foster parents to their existing Feline Foster Mentors.
+
+```text
+                                                                     _                ___       _.--.
+  _  ___ _   _               ____                                    \`.|\..----...-'`   `-._.-'_.-'`
+ | |/ (_) |_| |_ ___ _ __   / ___|  ___ _ __ __ _ _ __   ___ _ __    /  ' `         ,       __.-'
+ | ' /| | __| __/ _ \ '_ \  \___ \ / __| '__/ _` | '_ \ / _ \ '__|   )/' _/     \   `-_,   /
+ | . \| | |_| ||  __/ | | |  ___) | (__| | | (_| | |_) |  __/ |      `-'" `"\_  ,_.-;_.-\_ ',
+ |_|\_\_|\__|\__\___|_| |_| |____/ \___|_|  \__,_| .__/ \___|_|          _.-'_./   {_.'   ; /
+                                                 |_|                    {_.-``-'         {_/
+```
 
 ## Clone the Repository and Install Dependencies
 
-Optionally (instead of git clone), you can [download the zip archive](https://github.com/skylarstein/kitten-scraper/archive/master.zip)
+Clone the repository from the command line or optionally [download the zip archive](https://github.com/skylarstein/kitten-scraper/archive/master.zip). Performing 'pip install -r requirements.txt' from the command line is required in either case.
 
+```text
+$ git clone https://github.com/skylarstein/kitten-scraper.git kitten-scraper
+$ cd kitten-scraper
+$ pip install -r requirements.txt
 ```
-% git clone https://github.com/skylarstein/kitten-scraper.git kitten-scraper
-% cd kitten-scraper
-% pip install -r requirements.txt
-```
+
 Don't have pip installed? Two options:
 
-```
+```text
 $ sudo easy_install pip
 ```
+
 or..
-```
+
+```text
 $ curl https://bootstrap.pypa.io/get-pip.py | sudo python
 ```
 
 ## Setup and Configuration
 
 ### config.yaml
+
 Create a text file named 'config.yaml' in the kitten-scraper directory and enter your credentials and configuration in this format:
 
-```
+```yaml
 username : your_username
 password : your_password
 mentors_spreadsheet_key : key
@@ -35,18 +51,22 @@ login_url : http://url
 search_url : http://url
 list_animals_url : http://url
 animal_url : http://url
-do_not_assign_mentor : 
+do_not_assign_mentor :
     - 100 # special person number
     - 200 # special person number
+mentors :
+    - 8888 # feline foster mentor number
+    - 9999 # feline foster mentor number
 ```
+
 ### client_secret.json
 
-For Google Sheets integration and Google Sheets API platform access, copy your client_secret.json file to the kitten-scraper directory.
+Google Sheets integration and Google Sheets API platform access will require a 'client_secret.json' file. [Instructions by pygsheets](https://pygsheets.readthedocs.io/en/latest/authorizing.html) will assist you in creating this file. Copy 'client_secret.json' to the kitten-scraper directory.
 
 ## Command Line Arguments
 
-```
-% python kitten-scraper.py --help
+```text
+$ python kitten-scraper.py --help
 usage: kitten-scraper.py [-h] [-i INPUT] [-o OUTPUT] [--show_browser]
 
 optional arguments:
@@ -57,7 +77,11 @@ optional arguments:
                         output file (csv)
   --show_browser        show the browser window while working
 ```
+
 ## Let's Do This
 
+To generate a report, run kitten-scraper.py from the command line. Specify the path to the original feline foster report xls (-i) as well as the desired output file name (-o).
+
+```text
+$ python kitten-scraper.py -i /Users/skylar/KittenData/FosterReport-May12.xls -o /Users/skylar/KittenData/UpdatedFosterReport-May12.csv
 ```
-% python kitten-scraper.py -i /Users/skylar/Downloads/FosterReport.xls -o FosterReport.csv
