@@ -3,13 +3,15 @@ import sys
 import time
 import yaml
 from argparse import ArgumentParser
-from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
-from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.common.by import By
 from google_sheets_reader import GoogleSheetsReader
 from kitten_report_reader import KittenReportReader
 from kitten_utils import *
+from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoAlertPresentException
+from selenium.webdriver.common.alert import Alert
+from selenium.webdriver.common.by import By
 
 class KittenScraper(object):
     def load_configuration(self):
@@ -87,6 +89,12 @@ class KittenScraper(object):
         foster_parents = {}
         for a in animal_numbers:
             self._driver.get(self._animal_url.format(a))
+            try:
+                # Dismiss alert (if found)
+                Alert(self._driver).dismiss()
+            except NoAlertPresentException:
+                pass
+
             try:
                 p = int(self._get_attr_by_xpath('href', '//*[@id="Table17"]/tbody/tr[1]/td[2]/a').split('personid=')[1])
                 foster_parents.setdefault(p, []).append(a)
@@ -224,7 +232,7 @@ if __name__ == "__main__":
     # Load the daily kitten report
     #
     animal_numbers = kitten_report_reader.get_animal_numbers()
-    print('Found animal {} numbers: {}'.format(len(animal_numbers), ', '.join([str(a) for a in animal_numbers])))
+    print('Found {} animal numbers: {}'.format(len(animal_numbers), ', '.join([str(a) for a in animal_numbers])))
 
     kitten_scraper.start_browser(args.show_browser)
     if not kitten_scraper.login():

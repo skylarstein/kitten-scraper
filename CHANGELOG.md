@@ -1,5 +1,9 @@
 # 😺 [Kitten Scraper ](https://github.com/skylarstein/kitten-scraper)Change Log
 
+## [1.4.0](https://github.com/skylarstein/kitten-scraper/compare/v1.3.0...v1.4.0) (2018-07-11)
+
+* Dismiss alert dialog on Animal Details page if it exists
+
 ## [1.3.0](https://github.com/skylarstein/kitten-scraper/compare/v1.2.0...v1.3.0) (2018-06-13)
 
 * Add a note if foster parent is a mentor
