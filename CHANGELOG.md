@@ -1,5 +1,9 @@
 # 😺 [Kitten Scraper ](https://github.com/skylarstein/kitten-scraper)Change Log
 
+## [1.5.0](https://github.com/skylarstein/kitten-scraper/compare/v1.4.0...v1.5.0) (2018-07-13)
+
+* Include 'Special Animal Message'
+
 ## [1.4.0](https://github.com/skylarstein/kitten-scraper/compare/v1.3.0...v1.4.0) (2018-07-11)
 
 * Dismiss alert dialog on Animal Details page if it exists
