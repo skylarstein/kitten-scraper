@@ -59,7 +59,7 @@ class KittenReportReader(object):
 
         return animal_numbers
 
-    def output_results(self, persons_data, correct_foster_parents, csv_filename):
+    def output_results(self, persons_data, correct_foster_parents, animal_special_messages, csv_filename):
         ''' Combine the newly gathered person data with the daily report, output results
             to a new csv document.
         '''
@@ -71,13 +71,14 @@ class KittenReportReader(object):
         new_rows.append(self._sheet.row_values(0))
 
         new_rows[-1].append('Correct Foster Parent ID')
+        new_rows[-1].append('Report Notes')
         new_rows[-1].append('Name')
         new_rows[-1].append('E-mail')
         new_rows[-1].append('Phone')
         new_rows[-1].append('Foster Experience')
         new_rows[-1].append('Date Kittens Received')
         new_rows[-1].append('Quantity')
-        new_rows[-1].append('Notes')
+        new_rows[-1].append('Special Animal Message')
 
         processed_p_numbers = []
         for row_number in range(1, self._sheet.nrows): # ignore header
@@ -94,11 +95,10 @@ class KittenReportReader(object):
             #
             new_rows.append(self._copy_row_as_text(row_number))
 
-            corrected_person_number = next((p for p in correct_foster_parents if animal_number in correct_foster_parents[p]), 'UNKNOWN')
-            new_rows[-1].append('"{}"'.format(corrected_person_number))
-
             # Only include an extended details row once per foster parent
             #
+            corrected_person_number = next((p for p in correct_foster_parents if animal_number in correct_foster_parents[p]), 'UNKNOWN')
+
             if corrected_person_number in processed_p_numbers:
                 continue
             else:
@@ -106,11 +106,18 @@ class KittenReportReader(object):
 
             # Grab the person data from the associated person number
             #
-            person_data = persons_data[str(corrected_person_number)] if str(corrected_person_number) in persons_data else {}
+            person_data = persons_data[corrected_person_number] if corrected_person_number in persons_data else {}
             name = person_data['full_name'] if 'full_name' in person_data else ''
-            animal_quantity = self._count_animals(corrected_person_number, correct_foster_parents)
+
+            animal_quantity_string, animal_numbers = self._count_animals(corrected_person_number, correct_foster_parents)
             prev_animals_fostered = person_data['prev_animals_fostered'] if 'prev_animals_fostered' in person_data else None
-            notes = person_data['notes'] if 'notes' in person_data else ''
+            report_notes = person_data['notes'] if 'notes' in person_data else ''
+
+            special_message = ''
+            for a in animal_numbers:
+                msg = animal_special_messages[a]
+                if msg:
+                    special_message += '{}{}: {}'.format('\r\r' if special_message else '', a, animal_special_messages[a])
 
             if prev_animals_fostered is not None:
                 foster_experience = 'NEW' if not prev_animals_fostered else '{} previous'.format(prev_animals_fostered)
@@ -127,31 +134,29 @@ class KittenReportReader(object):
                 phone = 'c: {}'.format(cell_number)
 
             if len(home_number) >= 10: # ignore incomplete phone numbers
-                if len(phone):
-                    phone += '\r'
-                phone += 'h: {}'.format(home_number)
+                phone += '{}h: {}'.format('\r' if phone else '', home_number)
 
             # Build email(s) string
             #
             email = person_data['primary_email'] if 'primary_email' in person_data else ''
             secondary_email = person_data['secondary_email'] if 'secondary_email' in person_data else ''
 
-            if len(secondary_email):
-                if len(email):
-                    email += '\r'
-                email += secondary_email
+            if secondary_email:
+                email += '{}{}'.format('\r' if email else '', secondary_email)
 
             # Since the reports cover "last 24 hours" I'll assume received date is the same day as the status date
             #
             date_received = status_datetime.strftime('%d-%b-%Y') if status_datetime else ''
 
+            new_rows[-1].append('"{}"'.format(corrected_person_number))
+            new_rows[-1].append('"{}"'.format(report_notes))
             new_rows[-1].append('"{}"'.format(name))
             new_rows[-1].append('"{}"'.format(email))
             new_rows[-1].append('"{}"'.format(phone))
             new_rows[-1].append('"{}"'.format(foster_experience))
             new_rows[-1].append('="{}"'.format(date_received)) # using ="%s" for dates to deal with Excel auto-formatting issues
-            new_rows[-1].append('"{}"'.format(animal_quantity))
-            new_rows[-1].append('"{}"'.format(notes))
+            new_rows[-1].append('"{}"'.format(animal_quantity_string))
+            new_rows[-1].append('"{}"'.format(special_message))
 
         with open(csv_filename, 'w') as outfile:
             for row in new_rows:
@@ -183,9 +188,7 @@ class KittenReportReader(object):
 
             else:
                 s = str(self._sheet.row_values(row_number)[col_number])
-                if s == "null":
-                    s = ''
-                values.append('"{}"'.format(s))
+                values.append('"{}"'.format(s if s != 'null' else ''))
 
         return values
 
@@ -219,7 +222,8 @@ class KittenReportReader(object):
         ''' Count the number and age of each animal type assigned to this person number
         '''
         animal_types = []
-        animal_numbers = {}
+        animals_by_type = {}
+        animal_numbers = []
         animal_ages = {}
         last_animal_type = ''
         for row_number in range(1, self._sheet.nrows): # ignore header
@@ -239,6 +243,8 @@ class KittenReportReader(object):
 
             if person_number == p_number:
                 animal_types.append(a_type)
+                animal_numbers.append(a_number)
+
                 # WARNING: Making an assumption here that same animal types will be of the same age
                 # (or at least close enough in grouped litters) so that choosing one age to share won't
                 # be much of an issue.
@@ -246,10 +252,7 @@ class KittenReportReader(object):
                 if a_age:
                     animal_ages[a_type] = a_age
 
-                if a_type in animal_numbers:
-                    animal_numbers[a_type].append(a_number)
-                else:
-                    animal_numbers[a_type] = [a_number]
+                animals_by_type.setdefault(a_type, []).append(a_number)
 
         # We now have a list of all animal types. Next, create a set with total counts per type.
         #
@@ -264,8 +267,8 @@ class KittenReportReader(object):
             if result_str:
                 result_str += '\r'
             age, animal_type = self._pretty_print_animal_age(animal_ages[animal] if animal in animal_ages else '')
-            numbers = ', '.join(str(a) for a in animal_numbers[animal])
+            numbers = ', '.join(str(a) for a in animals_by_type[animal])
             animal_type = animal if len(animal) else animal_type # dealing with blank animal types in some foster reports
             result_str += '{} {}{} @ {} ({})'.format(animal_counts[animal], animal_type, 's' if animal_counts[animal] > 1 else '', age, numbers)
 
-        return result_str.lower()
+        return result_str.lower(), animal_numbers

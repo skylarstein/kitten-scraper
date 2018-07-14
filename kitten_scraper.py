@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import time
 import yaml
@@ -84,9 +85,10 @@ class KittenScraper(object):
         self._driver.find_element_by_id('Continue').click()
         return True
 
-    def get_animal_foster_parents(self, animal_numbers):
-        print('Looking up foster parent IDs for each foster animal...')
+    def get_animal_details(self, animal_numbers):
+        print('Looking up details for each foster animal...')
         foster_parents = {}
+        animal_special_messages = {}
         for a in animal_numbers:
             self._driver.get(self._animal_url.format(a))
             try:
@@ -100,7 +102,20 @@ class KittenScraper(object):
                 foster_parents.setdefault(p, []).append(a)
             except:
                 print_err('Failed to find foster parent for animal {}, please check report'.format(a))
-        return foster_parents
+
+            # Get Special Message text (if it exists)
+            special_msg = utf8(self._get_text_by_id('specialMessagesDialog'))
+
+            if special_msg:
+                # Remove text we don't care about...
+                special_msg = re.sub(r'(?i)This is a special message. If you would like to delete it then clear the Special Message box in the General Details section of this page.', '', special_msg).strip()
+
+                # Remove empty lines
+                special_msg = os.linesep.join([s for s in special_msg.splitlines() if s])
+
+            animal_special_messages[a] = special_msg
+ 
+        return foster_parents, animal_special_messages 
 
     def get_person_data(self, person_number, google_sheets_reader):
         ''' Search for the given person number, return details and contact information
@@ -108,14 +123,14 @@ class KittenScraper(object):
         print('Looking up person number {}...'.format(person_number))
 
         self._driver.get(self._search_url)
-        self._driver.find_element_by_id("userid").send_keys(str(person_number))
-        self._driver.find_element_by_id("userid").send_keys(webdriver.common.keys.Keys.RETURN)
+        self._driver.find_element_by_id('userid').send_keys(str(person_number))
+        self._driver.find_element_by_id('userid').send_keys(webdriver.common.keys.Keys.RETURN)
 
-        first_name            = self._get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtFirstName')
-        last_name             = self._get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtLastName')
-        preferred_name        = self._get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtPreferredName')
-        home_phone            = self._get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_homePhone_txtPhone3')
-        cell_phone            = self._get_text_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_mobilePhone_txtPhone3')		
+        first_name            = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtFirstName')
+        last_name             = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtLastName')
+        preferred_name        = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtPreferredName')
+        home_phone            = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_homePhone_txtPhone3')
+        cell_phone            = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_mobilePhone_txtPhone3')		
         primary_email         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[1]/td[1]')
         secondary_email       = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[2]/td[1]')
         prev_animals_fostered = self._prev_animals_fostered(person_number)
@@ -190,6 +205,14 @@ class KittenScraper(object):
         ''' Quick helper function to get attribute text with proper error handling
         '''
         try:
+            return self._driver.find_element_by_id(element_id).text
+        except:
+            return ''
+
+    def _get_attr_by_id(self, element_id):
+        ''' Quick helper function to get attribute text with proper error handling
+        '''
+        try:
             return self._driver.find_element_by_id(element_id).get_attribute('value')
         except:
             return ''
@@ -242,7 +265,7 @@ if __name__ == "__main__":
     # The topmost ID may be the current foster parent, or it may be a previous foster parent. This means we
     # need to explicitly look up the current foster parent ID for every kitten number.
     #
-    correct_foster_parents = kitten_scraper.get_animal_foster_parents(animal_numbers)
+    correct_foster_parents, animal_special_messages  = kitten_scraper.get_animal_details(animal_numbers)
 
     for p in correct_foster_parents:
         print('Animals for foster parent {} = {}'.format(p, correct_foster_parents[p]))
@@ -256,12 +279,12 @@ if __name__ == "__main__":
     #
     persons_data = {}
     for person in correct_foster_parents:
-        persons_data[str(person)] = kitten_scraper.get_person_data(person, google_sheets_reader)
+        persons_data[person] = kitten_scraper.get_person_data(person, google_sheets_reader)
 
     kitten_scraper.exit_browser()
 
     # Output the combined results to csv
     #
-    kitten_report_reader.output_results(persons_data, correct_foster_parents, args.output)
+    kitten_report_reader.output_results(persons_data, correct_foster_parents, animal_special_messages, args.output)
 
     print('\nKitten foster report completed in {0:.3f} seconds'.format(time.time() - start_time))
