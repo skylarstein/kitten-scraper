@@ -27,6 +27,7 @@ class KittenScraper(object):
             self._login_url = config['login_url']
             self._search_url = config['search_url']
             self._animal_url = config['animal_url']
+            self._medical_details_url = config['medical_details_url']
             self._list_animals_url = config['list_animals_url']
             self._do_not_assign_mentor = config['do_not_assign_mentor'] if 'do_not_assign_mentor' in config else []
             self._mentors = config['mentors'] if 'mentors' in config else []
@@ -38,6 +39,9 @@ class KittenScraper(object):
 
         except IOError as err:
             print_err('ERROR: Unable to read configuration file: {}, {}'.format(config_file, err))
+
+        except KeyError as err:
+            print_err('ERROR: Missing value in configuration file: {}, {}'.format(config_file, err))
 
         return False
 
@@ -86,10 +90,11 @@ class KittenScraper(object):
         return True
 
     def get_animal_details(self, animal_numbers):
-        print('Looking up details for each foster animal...')
         foster_parents = {}
         animal_special_messages = {}
+        animal_sn_status = {}
         for a in animal_numbers:
+            print('Looking up details for animal number {}...'.format(a))
             self._driver.get(self._animal_url.format(a))
             try:
                 # Dismiss alert (if found)
@@ -114,8 +119,18 @@ class KittenScraper(object):
                 special_msg = os.linesep.join([s for s in special_msg.splitlines() if s])
 
             animal_special_messages[a] = special_msg
- 
-        return foster_parents, animal_special_messages 
+
+            # Get spay/neuter status
+            try:
+                self._driver.get(self._medical_details_url.format(a))
+                sn_status = utf8(self._get_attr_by_xpath('innerText', '/html/body/center/table[2]/tbody/tr[2]/td/table/tbody/tr[4]/td[4]'))
+            except:
+                print_err('Failed to read spay/neuter status for animal {}'.format(a))
+                sn_status = 'Unknown'
+
+            animal_sn_status[a] = sn_status
+
+        return foster_parents, animal_special_messages, animal_sn_status
 
     def get_person_data(self, person_number, google_sheets_reader):
         ''' Search for the given person number, return details and contact information
@@ -265,7 +280,7 @@ if __name__ == "__main__":
     # The topmost ID may be the current foster parent, or it may be a previous foster parent. This means we
     # need to explicitly look up the current foster parent ID for every kitten number.
     #
-    correct_foster_parents, animal_special_messages  = kitten_scraper.get_animal_details(animal_numbers)
+    correct_foster_parents, animal_special_messages, sn_status  = kitten_scraper.get_animal_details(animal_numbers)
 
     for p in correct_foster_parents:
         print('Animals for foster parent {} = {}'.format(p, correct_foster_parents[p]))
@@ -285,6 +300,6 @@ if __name__ == "__main__":
 
     # Output the combined results to csv
     #
-    kitten_report_reader.output_results(persons_data, correct_foster_parents, animal_special_messages, args.output)
+    kitten_report_reader.output_results(persons_data, correct_foster_parents, animal_special_messages, sn_status, args.output)
 
     print('\nKitten foster report completed in {0:.3f} seconds'.format(time.time() - start_time))

@@ -1,5 +1,9 @@
 # 😺 [Kitten Scraper ](https://github.com/skylarstein/kitten-scraper)Change Log
 
+## [1.6.0](https://github.com/skylarstein/kitten-scraper/compare/v1.5.0...v1.6.0) (2018-07-16)
+
+* Include spay/neuter status with each animal number
+
 ## [1.5.0](https://github.com/skylarstein/kitten-scraper/compare/v1.4.0...v1.5.0) (2018-07-13)
 
 * Include 'Special Animal Message'
