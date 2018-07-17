@@ -59,7 +59,7 @@ class KittenReportReader(object):
 
         return animal_numbers
 
-    def output_results(self, persons_data, correct_foster_parents, animal_special_messages, csv_filename):
+    def output_results(self, persons_data, correct_foster_parents, animal_special_messages, sn_status, csv_filename):
         ''' Combine the newly gathered person data with the daily report, output results
             to a new csv document.
         '''
@@ -109,7 +109,7 @@ class KittenReportReader(object):
             person_data = persons_data[corrected_person_number] if corrected_person_number in persons_data else {}
             name = person_data['full_name'] if 'full_name' in person_data else ''
 
-            animal_quantity_string, animal_numbers = self._count_animals(corrected_person_number, correct_foster_parents)
+            animal_quantity_string, animal_numbers = self._count_animals(corrected_person_number, correct_foster_parents, sn_status)
             prev_animals_fostered = person_data['prev_animals_fostered'] if 'prev_animals_fostered' in person_data else None
             report_notes = person_data['notes'] if 'notes' in person_data else ''
 
@@ -218,7 +218,7 @@ class KittenReportReader(object):
 
         return pretty_age_string, animal_type
 
-    def _count_animals(self, person_number, correct_foster_parents):
+    def _count_animals(self, person_number, correct_foster_parents, sn_status):
         ''' Count the number and age of each animal type assigned to this person number
         '''
         animal_types = []
@@ -267,8 +267,12 @@ class KittenReportReader(object):
             if result_str:
                 result_str += '\r'
             age, animal_type = self._pretty_print_animal_age(animal_ages[animal] if animal in animal_ages else '')
-            numbers = ', '.join(str(a) for a in animals_by_type[animal])
-            animal_type = animal if len(animal) else animal_type # dealing with blank animal types in some foster reports
-            result_str += '{} {}{} @ {} ({})'.format(animal_counts[animal], animal_type, 's' if animal_counts[animal] > 1 else '', age, numbers)
 
-        return result_str.lower(), animal_numbers
+            # Include spay/neuter status with each animal number
+            a_numbers_str = ''
+            for a in animals_by_type[animal]:
+                a_numbers_str += '{}{} (SN={})'.format('\r' if a_numbers_str else '', a, sn_status[a] if a in sn_status else 'Unknown')
+
+            result_str += '{} {}{} @ {}\r{}'.format(animal_counts[animal], animal_type.lower(), 's' if animal_counts[animal] > 1 else '', age, a_numbers_str)
+
+        return result_str, animal_numbers
