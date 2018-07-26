@@ -158,6 +158,8 @@ class KittenReportReader(object):
             new_rows[-1].append('"{}"'.format(animal_quantity_string))
             new_rows[-1].append('"{}"'.format(special_message))
 
+            print('{} = {}'.format(name, animal_numbers))
+
         with open(csv_filename, 'w') as outfile:
             for row in new_rows:
                 outfile.write(','.join(row))
