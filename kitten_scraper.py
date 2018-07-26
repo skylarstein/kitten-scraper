@@ -82,6 +82,9 @@ class KittenScraper(object):
         except TimeoutException:
             print_err('ERROR: Unable to load the login page. Please check your connection.')
             return False
+        except NoSuchElementException:
+            print_err('ERROR: Unable to load the login page. Please check your connection.')
+            return False
 
         self._driver.find_element_by_id("txt_username").send_keys(self._username)
         self._driver.find_element_by_id("txt_password").send_keys(self._password)
