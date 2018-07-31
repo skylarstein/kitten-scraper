@@ -216,6 +216,7 @@ class KittenReportReader(object):
                 pretty_age_string = '{} weeks'.format(int(weeks) + int(months) * 4)
                 animal_type = 'kitten'
         except:
+            animal_type = 'kitten' # I have no idea, but 'kitten' is a safe bet
             pretty_age_string = 'Unknown Age'
 
         return pretty_age_string, animal_type
