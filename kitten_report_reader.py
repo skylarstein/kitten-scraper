@@ -138,11 +138,9 @@ class KittenReportReader(object):
 
             # Build email(s) string
             #
-            email = person_data['primary_email'] if 'primary_email' in person_data else ''
-            secondary_email = person_data['secondary_email'] if 'secondary_email' in person_data else ''
-
-            if secondary_email:
-                email += '{}{}'.format('\r' if email else '', secondary_email)
+            email = ''
+            for e in person_data['emails']:
+                email += '{}{}'.format('\r' if email else '', e)
 
             # Since the reports cover "last 24 hours" I'll assume received date is the same day as the status date
             #

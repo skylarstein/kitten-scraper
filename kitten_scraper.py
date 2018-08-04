@@ -144,13 +144,20 @@ class KittenScraper(object):
         self._driver.find_element_by_id('userid').send_keys(str(person_number))
         self._driver.find_element_by_id('userid').send_keys(webdriver.common.keys.Keys.RETURN)
 
-        first_name            = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtFirstName')
-        last_name             = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtLastName')
-        preferred_name        = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtPreferredName')
-        home_phone            = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_homePhone_txtPhone3')
-        cell_phone            = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_mobilePhone_txtPhone3')		
-        primary_email         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[1]/td[1]')
-        secondary_email       = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[2]/td[1]')
+        first_name     = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtFirstName')
+        last_name      = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtLastName')
+        preferred_name = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtPreferredName')
+        home_phone     = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_homePhone_txtPhone3')
+        cell_phone     = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_mobilePhone_txtPhone3')		
+        email1         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[1]/td[1]')
+        email2         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[2]/td[1]')
+        email3         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[3]/td[1]')
+        email4         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[4]/td[1]')
+
+        emails = set()
+        for email in (email for email in [email1, email2, email3, email4] if email): # add non-empties to set
+            emails.add(email)
+
         prev_animals_fostered = self._prev_animals_fostered(person_number)
 
         full_name = preferred_name if preferred_name else first_name if first_name else ''
@@ -161,7 +168,8 @@ class KittenScraper(object):
         if person_number in self._mentors:
             notes += '{}*** {} is a mentor'.format('\r' if len(notes) else '', full_name)
 
-        matching_sheets = google_sheets_reader.find_matches_in_feline_foster_spreadsheet([full_name, primary_email, secondary_email])
+        match_strings = emails.union([full_name])
+        matching_sheets = google_sheets_reader.find_matches_in_feline_foster_spreadsheet(match_strings)
         if matching_sheets:
             notes += '{}*** Found matching mentor{}: {}'.format('\r' if len(notes) else '',
                                                                 's' if len(matching_sheets) > 1 else '',
@@ -173,8 +181,7 @@ class KittenScraper(object):
             'full_name'             : full_name,
             'home_phone'            : home_phone,
             'cell_phone'            : cell_phone,
-            'primary_email'         : primary_email,
-            'secondary_email'       : secondary_email,
+            'emails'                : emails,
             'prev_animals_fostered' : prev_animals_fostered,
             'notes'                 : notes
         }
