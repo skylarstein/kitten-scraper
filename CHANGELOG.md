@@ -1,5 +1,11 @@
 # 😺 [Kitten Scraper ](https://github.com/skylarstein/kitten-scraper)Change Log
 
+## [1.7.0](https://github.com/skylarstein/kitten-scraper/compare/v1.6.0...v1.7.0) (2018-08-05)
+
+* Support up to 4 emails per foster parent (not covering N emails complexity for now)
+* Better handling of empty animal age string
+* User friendly error if no VPN connection at login
+
 ## [1.6.0](https://github.com/skylarstein/kitten-scraper/compare/v1.5.0...v1.6.0) (2018-07-16)
 
 * Include spay/neuter status with each animal number
