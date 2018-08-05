@@ -138,11 +138,9 @@ class KittenReportReader(object):
 
             # Build email(s) string
             #
-            email = person_data['primary_email'] if 'primary_email' in person_data else ''
-            secondary_email = person_data['secondary_email'] if 'secondary_email' in person_data else ''
-
-            if secondary_email:
-                email += '{}{}'.format('\r' if email else '', secondary_email)
+            email = ''
+            for e in person_data['emails']:
+                email += '{}{}'.format('\r' if email else '', e)
 
             # Since the reports cover "last 24 hours" I'll assume received date is the same day as the status date
             #
@@ -157,6 +155,8 @@ class KittenReportReader(object):
             new_rows[-1].append('="{}"'.format(date_received)) # using ="%s" for dates to deal with Excel auto-formatting issues
             new_rows[-1].append('"{}"'.format(animal_quantity_string))
             new_rows[-1].append('"{}"'.format(special_message))
+
+            print('{} = {}'.format(name, animal_numbers))
 
         with open(csv_filename, 'w') as outfile:
             for row in new_rows:
@@ -214,6 +214,7 @@ class KittenReportReader(object):
                 pretty_age_string = '{} weeks'.format(int(weeks) + int(months) * 4)
                 animal_type = 'kitten'
         except:
+            animal_type = 'kitten' # I have no idea, but 'kitten' is a safe bet
             pretty_age_string = 'Unknown Age'
 
         return pretty_age_string, animal_type
