@@ -1,5 +1,9 @@
 # 😺 [Kitten Scraper ](https://github.com/skylarstein/kitten-scraper)Change Log
 
+## [1.7.1](https://github.com/skylarstein/kitten-scraper/compare/v1.7.0...v1.7.1) (2018-11-11)
+* Improved debug output and error handling
+* Fixes Python3 support
+
 ## [1.7.0](https://github.com/skylarstein/kitten-scraper/compare/v1.6.0...v1.7.0) (2018-08-05)
 
 * Support up to 4 emails per foster parent (not covering N emails complexity for now)
