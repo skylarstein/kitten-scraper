@@ -146,17 +146,19 @@ class KittenReportReader(object):
             #
             date_received = status_datetime.strftime('%d-%b-%Y') if status_datetime else ''
 
-            new_rows[-1].append('"{}"'.format(corrected_person_number))
+            # Explicitly wrapping numbers/datestr with ="{}" to avoid Excel auto-formatting issues.
+            #
+            new_rows[-1].append('="{}"'.format(corrected_person_number))
             new_rows[-1].append('"{}"'.format(report_notes))
             new_rows[-1].append('"{}"'.format(name))
             new_rows[-1].append('"{}"'.format(email))
             new_rows[-1].append('"{}"'.format(phone))
             new_rows[-1].append('"{}"'.format(foster_experience))
-            new_rows[-1].append('="{}"'.format(date_received)) # using ="%s" for dates to deal with Excel auto-formatting issues
+            new_rows[-1].append('="{}"'.format(date_received))
             new_rows[-1].append('"{}"'.format(animal_quantity_string))
             new_rows[-1].append('"{}"'.format(special_message))
 
-            print('{} = {}'.format(name, animal_numbers))
+            print('{}, {} {}{}{}'.format(name, foster_experience, ConsoleFormat.GREEN, report_notes, ConsoleFormat.END))
 
         with open(csv_filename, 'w') as outfile:
             for row in new_rows:
@@ -172,7 +174,8 @@ class KittenReportReader(object):
         return datetime(*xlrd.xldate_as_tuple(xlsfloat, workbook_datemode))
 
     def _copy_row_as_text(self, row_number):
-        ''' Output is written as csv so we need to stringify all types (dates in particular)
+        ''' Output is written as csv so we need to stringify all types (dates in particular).
+            Explicitly wrapping numbers/datestr with ="{}" to avoid Excel auto-formatting issues.
         '''
         values = []
         for col_number in range(0, len(self._sheet.row_values(row_number))):
@@ -180,11 +183,10 @@ class KittenReportReader(object):
 
             if cell_type == xlrd.XL_CELL_DATE:
                 dt = self._xlsfloat_as_datetime(self._sheet.row_values(row_number)[col_number], self._workbook.datemode)
-                # wrapping datestr in ="%s" to deal with Excel auto-formatting issues
                 values.append(dt.strftime('="%d-%b-%Y %-I:%M %p"'))
 
             elif cell_type == xlrd.XL_CELL_NUMBER:
-                values.append(str(int(self._sheet.row_values(row_number)[col_number])))
+                values.append('="{}"'.format(str(int(self._sheet.row_values(row_number)[col_number]))))
 
             else:
                 s = str(self._sheet.row_values(row_number)[col_number])

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import re
 import sys
@@ -13,6 +14,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.common.alert import Alert
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
 
 class KittenScraper(object):
     def load_configuration(self):
@@ -86,10 +88,15 @@ class KittenScraper(object):
             print_err('ERROR: Unable to load the login page. Please check your connection.')
             return False
 
-        self._driver.find_element_by_id("txt_username").send_keys(self._username)
-        self._driver.find_element_by_id("txt_password").send_keys(self._password)
-        self._driver.find_element_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_btn_login').click()
-        self._driver.find_element_by_id('Continue').click()
+        try:
+            self._driver.find_element_by_id("txt_username").send_keys(self._username)
+            self._driver.find_element_by_id("txt_password").send_keys(self._password)
+            self._driver.find_element_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_btn_login').click()
+            self._driver.find_element_by_id('Continue').click()
+        except NoSuchElementException:
+            print_err('ERROR: Unable to login. Please check your username/password.')
+            return False
+
         return True
 
     def get_animal_details(self, animal_numbers):
@@ -138,7 +145,8 @@ class KittenScraper(object):
     def get_person_data(self, person_number, google_sheets_reader):
         ''' Search for the given person number, return details and contact information
         '''
-        print('Looking up person number {}...'.format(person_number))
+        print('Looking up person number {}... '.format(person_number), end='')
+        sys.stdout.flush()
 
         self._driver.get(self._search_url)
         self._driver.find_element_by_id('userid').send_keys(str(person_number))
@@ -174,6 +182,8 @@ class KittenScraper(object):
             notes += '{}*** Found matching mentor{}: {}'.format('\r' if len(notes) else '',
                                                                 's' if len(matching_sheets) > 1 else '',
                                                                 ', '.join([str(s) for s in matching_sheets]))
+
+        print('{} {}'.format(first_name, last_name))
         return {
             'first_name'            : first_name,
             'last_name'             : last_name,
@@ -227,26 +237,34 @@ class KittenScraper(object):
         return previous_feline_foster_count
 
     def _get_text_by_id(self, element_id):
-        ''' Quick helper function to get attribute text with proper error handling
-        '''
         try:
             return self._driver.find_element_by_id(element_id).text
         except:
             return ''
 
     def _get_attr_by_id(self, element_id):
-        ''' Quick helper function to get attribute text with proper error handling
-        '''
         try:
             return self._driver.find_element_by_id(element_id).get_attribute('value')
         except:
             return ''
 
     def _get_attr_by_xpath(self, attr, element_xpath):
-        ''' Quick helper function to get attribute text with proper error handling
-        '''
         try:
             return self._driver.find_element_by_xpath(element_xpath).get_attribute(attr)
+        except:
+            return ''
+
+    def _get_checked_by_id(self, element_id):
+        try:
+            attr = self._driver.find_element_by_id(element_id).get_attribute('checked')
+            return True if attr else False
+        except:
+            return False
+
+    def _get_selection_by_id(self, element_id):
+        try:
+            select_element = Select(self._driver.find_element_by_id(element_id))
+            return select_element.first_selected_option.text
         except:
             return ''
 
@@ -290,7 +308,7 @@ if __name__ == "__main__":
     # The topmost ID may be the current foster parent, or it may be a previous foster parent. This means we
     # need to explicitly look up the current foster parent ID for every kitten number.
     #
-    correct_foster_parents, animal_special_messages, sn_status  = kitten_scraper.get_animal_details(animal_numbers)
+    correct_foster_parents, animal_special_messages, sn_status = kitten_scraper.get_animal_details(animal_numbers)
 
     for p in correct_foster_parents:
         print('Animals for foster parent {} = {}'.format(p, correct_foster_parents[p]))
