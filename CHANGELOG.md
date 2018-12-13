@@ -1,6 +1,6 @@
 # 😺 [Kitten Scraper ](https://github.com/skylarstein/kitten-scraper)Change Log
 
-## [1.8.0](https://github.com/skylarstein/kitten-scraper/compare/v1.7.1...v1.8.0) (2018-11-11)
+## [1.8.0](https://github.com/skylarstein/kitten-scraper/compare/v1.7.1...v1.8.0) (2018-12-13)
 
 * Retrieve current animal status, filter out animals not currently in foster
 * Cleanup output CSV, add current animal status, remove unnecessary data, sort
