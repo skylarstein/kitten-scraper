@@ -76,7 +76,7 @@ class KittenReportReader(object):
         csv_rows[-1].append('Quantity')
         csv_rows[-1].append('Special Animal Message')
 
-        for person_number in foster_parents:
+        for person_number in sorted(foster_parents, key=lambda p: persons_data[p]['notes']):
             person_data = persons_data[person_number]
             name = person_data['full_name']
             prev_animals_fostered = person_data['prev_animals_fostered']
