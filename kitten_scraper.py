@@ -5,6 +5,7 @@ import sys
 import time
 import yaml
 from argparse import ArgumentParser
+from datetime import datetime
 from google_sheets_reader import GoogleSheetsReader
 from kitten_report_reader import KittenReportReader
 from kitten_utils import *
@@ -101,22 +102,17 @@ class KittenScraper(object):
 
     def get_animal_details(self, animal_numbers):
         foster_parents = {}
-        animal_special_messages = {}
-        animal_sn_status = {}
+        animal_details = {}
+        filtered_animals = set()
         for a in animal_numbers:
-            print('Looking up details for animal number {}...'.format(a))
+            print('Looking up animal {}... '.format(a), end='')
+            sys.stdout.flush()
             self._driver.get(self._animal_url.format(a))
             try:
                 # Dismiss alert (if found)
                 Alert(self._driver).dismiss()
             except NoAlertPresentException:
                 pass
-
-            try:
-                p = int(self._get_attr_by_xpath('href', '//*[@id="Table17"]/tbody/tr[1]/td[2]/a').split('personid=')[1])
-                foster_parents.setdefault(p, []).append(a)
-            except:
-                print_err('Failed to find foster parent for animal {}, please check report'.format(a))
 
             # Get Special Message text (if it exists)
             special_msg = utf8(self._get_text_by_id('specialMessagesDialog'))
@@ -128,24 +124,44 @@ class KittenScraper(object):
                 # Remove empty lines
                 special_msg = os.linesep.join([s for s in special_msg.splitlines() if s])
 
-            animal_special_messages[a] = special_msg
+            animal_details[a] = lambda: None # emulate SimpleNamespace for Python 2.7
+            animal_details[a].message = special_msg
+            status = self._get_selection_by_id('status')
+            sub_status = self._get_selection_by_id('subStatus')
+            animal_details[a].status = '{}{}{}'.format(status, ' - ' if sub_status else '', sub_status)
 
-            # Get spay/neuter status
+            try:
+                animal_details[a].status_date = datetime.strptime(self._get_attr_by_id('statusdate'), '%m/%d/%Y').strftime('%-d-%b-%Y')
+            except ValueError:
+                animal_details[a].status_date = 'Unknown'
+
+            # If this animal is currently in foster, associate to the responsible person (foster parent)
+            #
+            if status.lower().find('in foster') >= 0 and status.lower().find('unassisted death') < 0:
+                try:
+                    p = int(self._get_attr_by_xpath('href', '//*[@id="Table17"]/tbody/tr[1]/td[2]/a').split('personid=')[1])
+                    foster_parents.setdefault(p, []).append(a)
+                except:
+                    print_err('Failed to find foster parent for animal {}, please check report'.format(a))
+            else:
+                filtered_animals.add(a)
+
+            # Get spay/neuter status from the medical details page
             try:
                 self._driver.get(self._medical_details_url.format(a))
-                sn_status = utf8(self._get_attr_by_xpath('innerText', '/html/body/center/table[2]/tbody/tr[2]/td/table/tbody/tr[4]/td[4]'))
+                animal_details[a].sn = utf8(self._get_attr_by_xpath('innerText', '/html/body/center/table[2]/tbody/tr[2]/td/table/tbody/tr[4]/td[4]'))
             except:
                 print_err('Failed to read spay/neuter status for animal {}'.format(a))
-                sn_status = 'Unknown'
+                animal_details[a].sn = 'Unknown'
 
-            animal_sn_status[a] = sn_status
+            print('{}'.format(animal_details[a].status))
 
-        return foster_parents, animal_special_messages, animal_sn_status
+        return foster_parents, animal_details, filtered_animals
 
     def get_person_data(self, person_number, google_sheets_reader):
         ''' Search for the given person number, return details and contact information
         '''
-        print('Looking up person number {}... '.format(person_number), end='')
+        print('Looking up person {}... '.format(person_number), end='')
         sys.stdout.flush()
 
         self._driver.get(self._search_url)
@@ -179,9 +195,7 @@ class KittenScraper(object):
         match_strings = emails.union([full_name])
         matching_sheets = google_sheets_reader.find_matches_in_feline_foster_spreadsheet(match_strings)
         if matching_sheets:
-            notes += '{}*** Found matching mentor{}: {}'.format('\r' if len(notes) else '',
-                                                                's' if len(matching_sheets) > 1 else '',
-                                                                ', '.join([str(s) for s in matching_sheets]))
+            notes += '{}*** Found matching mentor(s): {}'.format('\r' if len(notes) else '', ', '.join([str(s) for s in matching_sheets]))
 
         print('{} {}'.format(first_name, last_name))
         return {
@@ -308,10 +322,10 @@ if __name__ == "__main__":
     # The topmost ID may be the current foster parent, or it may be a previous foster parent. This means we
     # need to explicitly look up the current foster parent ID for every kitten number.
     #
-    correct_foster_parents, animal_special_messages, sn_status = kitten_scraper.get_animal_details(animal_numbers)
+    foster_parents, animal_details, filtered_animals = kitten_scraper.get_animal_details(animal_numbers)
 
-    for p in correct_foster_parents:
-        print('Animals for foster parent {} = {}'.format(p, correct_foster_parents[p]))
+    for p in foster_parents:
+        print('Animals for foster parent {} = {}'.format(p, foster_parents[p]))
 
     # Load the Feline Mentors spreadsheet
     #
@@ -321,13 +335,13 @@ if __name__ == "__main__":
     # Log in and query foster parent details (person number -> name, contact details, etc)
     #
     persons_data = {}
-    for person in correct_foster_parents:
+    for person in foster_parents:
         persons_data[person] = kitten_scraper.get_person_data(person, google_sheets_reader)
 
     kitten_scraper.exit_browser()
 
     # Output the combined results to csv
     #
-    kitten_report_reader.output_results(persons_data, correct_foster_parents, animal_special_messages, sn_status, args.output)
+    kitten_report_reader.output_results(persons_data, foster_parents, animal_details, filtered_animals, args.output)
 
     print('\nKitten foster report completed in {0:.3f} seconds'.format(time.time() - start_time))
