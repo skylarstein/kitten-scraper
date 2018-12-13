@@ -59,65 +59,36 @@ class KittenReportReader(object):
 
         return animal_numbers
 
-    def output_results(self, persons_data, correct_foster_parents, animal_special_messages, sn_status, csv_filename):
-        ''' Combine the newly gathered person data with the daily report, output results
-            to a new csv document.
+    def output_results(self, persons_data, foster_parents, animal_details, filtered_animals, csv_filename):
+        ''' Output the complete details/status to a new csv document.
         '''
         print_success('Writing results to {}...'.format(csv_filename))
+        csv_rows = []
 
-        # First include the original column headers, then add columns for our new data
-        #
-        new_rows = []
-        new_rows.append(self._sheet.row_values(0))
+        csv_rows.append([])
+        csv_rows[-1].append('Kitten-Scraper Notes')
+        csv_rows[-1].append('Name')
+        csv_rows[-1].append('E-mail')
+        csv_rows[-1].append('Phone')
+        csv_rows[-1].append('Person ID')
+        csv_rows[-1].append('Foster Experience')
+        csv_rows[-1].append('Date Kittens Received')
+        csv_rows[-1].append('Quantity')
+        csv_rows[-1].append('Special Animal Message')
 
-        new_rows[-1].append('Correct Foster Parent ID')
-        new_rows[-1].append('Report Notes')
-        new_rows[-1].append('Name')
-        new_rows[-1].append('E-mail')
-        new_rows[-1].append('Phone')
-        new_rows[-1].append('Foster Experience')
-        new_rows[-1].append('Date Kittens Received')
-        new_rows[-1].append('Quantity')
-        new_rows[-1].append('Special Animal Message')
+        for person_number in sorted(foster_parents, key=lambda p: persons_data[p]['notes']):
+            person_data = persons_data[person_number]
+            name = person_data['full_name']
+            prev_animals_fostered = person_data['prev_animals_fostered']
+            report_notes = person_data['notes']
 
-        processed_p_numbers = []
-        for row_number in range(1, self._sheet.nrows): # ignore header
-            animal_type = self._sheet.row_values(row_number)[self.__ANIMAL_TYPE_COL]
-            animal_number = int(self._sheet.row_values(row_number)[self.__ANIMAL_ID_COL] or 0)
-            status_datetime = self._xlsfloat_as_datetime(self._sheet.row_values(row_number)[self.__STATUS_DATE_COL], self._workbook.datemode)
-
-            # If there is no animal number, skip the entire row
-            #
-            if not animal_number:
-                continue
-
-            # Include original column data as text since we're building a CSV document
-            #
-            new_rows.append(self._copy_row_as_text(row_number))
-
-            # Only include an extended details row once per foster parent
-            #
-            corrected_person_number = next((p for p in correct_foster_parents if animal_number in correct_foster_parents[p]), 'UNKNOWN')
-
-            if corrected_person_number in processed_p_numbers:
-                continue
-            else:
-                processed_p_numbers.append(corrected_person_number)
-
-            # Grab the person data from the associated person number
-            #
-            person_data = persons_data[corrected_person_number] if corrected_person_number in persons_data else {}
-            name = person_data['full_name'] if 'full_name' in person_data else ''
-
-            animal_quantity_string, animal_numbers = self._count_animals(corrected_person_number, correct_foster_parents, sn_status)
-            prev_animals_fostered = person_data['prev_animals_fostered'] if 'prev_animals_fostered' in person_data else None
-            report_notes = person_data['notes'] if 'notes' in person_data else ''
+            animal_quantity_string, animal_numbers = self._count_animals(person_number, foster_parents, animal_details)
 
             special_message = ''
             for a in animal_numbers:
-                msg = animal_special_messages[a]
+                msg = animal_details[a].message
                 if msg:
-                    special_message += '{}{}: {}'.format('\r\r' if special_message else '', a, animal_special_messages[a])
+                    special_message += '{}{}: {}'.format('\r\r' if special_message else '', a, animal_details[a].message)
 
             if prev_animals_fostered is not None:
                 foster_experience = 'NEW' if not prev_animals_fostered else '{} previous'.format(prev_animals_fostered)
@@ -126,9 +97,8 @@ class KittenReportReader(object):
 
             # Build phone number(s) string
             #
-            cell_number = person_data['cell_phone'] if 'cell_phone' in person_data else ''
-            home_number = person_data['home_phone'] if 'home_phone' in person_data else ''
-
+            cell_number = person_data['cell_phone']
+            home_number = person_data['home_phone']
             phone = ''
             if len(cell_number) >= 10: # ignore incomplete phone numbers
                 phone = 'c: {}'.format(cell_number)
@@ -142,28 +112,38 @@ class KittenReportReader(object):
             for e in person_data['emails']:
                 email += '{}{}'.format('\r' if email else '', e)
 
-            # Since the reports cover "last 24 hours" I'll assume received date is the same day as the status date
+            # I'll assume all kittens in this litter/group went into foster on the same day since this is a daily report
             #
-            date_received = status_datetime.strftime('%d-%b-%Y') if status_datetime else ''
+            date_received = animal_details[animal_numbers[0]].status_date
 
             # Explicitly wrapping numbers/datestr with ="{}" to avoid Excel auto-formatting issues.
             #
-            new_rows[-1].append('="{}"'.format(corrected_person_number))
-            new_rows[-1].append('"{}"'.format(report_notes))
-            new_rows[-1].append('"{}"'.format(name))
-            new_rows[-1].append('"{}"'.format(email))
-            new_rows[-1].append('"{}"'.format(phone))
-            new_rows[-1].append('"{}"'.format(foster_experience))
-            new_rows[-1].append('="{}"'.format(date_received))
-            new_rows[-1].append('"{}"'.format(animal_quantity_string))
-            new_rows[-1].append('"{}"'.format(special_message))
+            csv_rows.append([])
+            csv_rows[-1].append('"{}"'.format(report_notes))
+            csv_rows[-1].append('"{}"'.format(name))
+            csv_rows[-1].append('"{}"'.format(email))
+            csv_rows[-1].append('"{}"'.format(phone))
+            csv_rows[-1].append('="{}"'.format(person_number))
+            csv_rows[-1].append('"{}"'.format(foster_experience))
+            csv_rows[-1].append('="{}"'.format(date_received))
+            csv_rows[-1].append('"{}"'.format(animal_quantity_string))
+            csv_rows[-1].append('"{}"'.format(special_message))
 
             print('{}, {} {}{}{}'.format(name, foster_experience, ConsoleFormat.GREEN, report_notes, ConsoleFormat.END))
 
         with open(csv_filename, 'w') as outfile:
-            for row in new_rows:
+            for row in csv_rows:
                 outfile.write(','.join(row))
                 outfile.write('\n')
+
+            if not len(foster_parents):
+                outfile.write('*** None of the animals in this report are currently in foster\n')
+                print_warn('None of the animals in this report are currently in foster. Nothing to do!')
+
+            if len(filtered_animals):
+                outfile.write('\n\n\n*** Animals not in foster\n')
+                for a in filtered_animals:
+                    outfile.write('{} - {}\n'.format(a, animal_details[a].status))
 
     def _xlsfloat_as_datetime(self, xlsfloat, workbook_datemode):
         ''' Convert Excel float date type to datetime
@@ -179,20 +159,26 @@ class KittenReportReader(object):
         '''
         values = []
         for col_number in range(0, len(self._sheet.row_values(row_number))):
-            cell_type = self._sheet.cell_type(row_number, col_number)
-
-            if cell_type == xlrd.XL_CELL_DATE:
-                dt = self._xlsfloat_as_datetime(self._sheet.row_values(row_number)[col_number], self._workbook.datemode)
-                values.append(dt.strftime('="%d-%b-%Y %-I:%M %p"'))
-
-            elif cell_type == xlrd.XL_CELL_NUMBER:
-                values.append('="{}"'.format(str(int(self._sheet.row_values(row_number)[col_number]))))
-
-            else:
-                s = str(self._sheet.row_values(row_number)[col_number])
-                values.append('"{}"'.format(s if s != 'null' else ''))
+            values.append(self._cell_to_string(row_number, col_number))
 
         return values
+
+    def _cell_to_string(self, row_number, col_number):
+        cell_type = self._sheet.cell_type(row_number, col_number)
+        result = ''
+
+        if cell_type == xlrd.XL_CELL_DATE:
+            dt = self._xlsfloat_as_datetime(self._sheet.row_values(row_number)[col_number], self._workbook.datemode)
+            result = dt.strftime('="%d-%b-%Y %-I:%M %p"')
+
+        elif cell_type == xlrd.XL_CELL_NUMBER:
+            result = '="{}"'.format(str(int(self._sheet.row_values(row_number)[col_number])))
+
+        else:
+            s = str(self._sheet.row_values(row_number)[col_number])
+            result = '"{}"'.format(s if s != 'null' else '')
+
+        return result
 
     def _pretty_print_animal_age(self, age_string):
         ''' Expecting an age string in the format '%d years %d months %d weeks'
@@ -221,7 +207,7 @@ class KittenReportReader(object):
 
         return pretty_age_string, animal_type
 
-    def _count_animals(self, person_number, correct_foster_parents, sn_status):
+    def _count_animals(self, person_number, foster_parents, animal_details):
         ''' Count the number and age of each animal type assigned to this person number
         '''
         animal_types = []
@@ -236,7 +222,7 @@ class KittenReportReader(object):
 
             a_type = self._sheet.row_values(row_number)[self.__ANIMAL_TYPE_COL]
             a_age = self._sheet.row_values(row_number)[self.__ANIMAL_AGE_COL]
-            p_number = next((p for p in correct_foster_parents if a_number in correct_foster_parents[p]), None)
+            p_number = next((p for p in foster_parents if a_number in foster_parents[p]), None)
 
             if not a_type:
                 a_type = last_animal_type
@@ -274,8 +260,9 @@ class KittenReportReader(object):
             # Include spay/neuter status with each animal number
             a_numbers_str = ''
             for a in animals_by_type[animal]:
-                a_numbers_str += '{}{} (SN={})'.format('\r' if a_numbers_str else '', a, sn_status[a] if a in sn_status else 'Unknown')
-
+                sn_str = animal_details[a].sn if a in animal_details else 'Unknown'
+                status_str = animal_details[a].status if a in animal_details else 'Unknown'
+                a_numbers_str += '{}{} (SN: {}, Status: {})'.format('\r' if a_numbers_str else '', a, sn_str, status_str)
             result_str += '{} {}{} @ {}\r{}'.format(animal_counts[animal], animal_type.lower(), 's' if animal_counts[animal] > 1 else '', age, a_numbers_str)
 
         return result_str, animal_numbers
