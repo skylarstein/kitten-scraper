@@ -32,6 +32,7 @@ class KittenScraper(object):
             self._animal_url = config['animal_url']
             self._medical_details_url = config['medical_details_url']
             self._list_animals_url = config['list_animals_url']
+            self._mentors_sheets_key = config['mentors_sheets_key']
             self._do_not_assign_mentor = config['do_not_assign_mentor'] if 'do_not_assign_mentor' in config else []
             self._mentors = config['mentors'] if 'mentors' in config else []
 
@@ -319,8 +320,9 @@ if __name__ == "__main__":
         sys.exit()
 
     # If an animal has had multiple foster parents, the order of associated person IDs may vary per report.
-    # The topmost ID may be the current foster parent, or it may be a previous foster parent. This means we
-    # need to explicitly look up the current foster parent ID for every kitten number.
+    # The topmost ID may be the current foster parent, or it may be a previous foster parent. Also, depending
+    # on when the report is processed by this tool, a new person may already be associated to the animal.
+    # This means we need to explicitly look up the current person ID for every kitten number.
     #
     foster_parents, animal_details, filtered_animals = kitten_scraper.get_animal_details(animal_numbers)
 
@@ -330,7 +332,7 @@ if __name__ == "__main__":
     # Load the Feline Mentors spreadsheet
     #
     google_sheets_reader = GoogleSheetsReader()
-    google_sheets_reader.load_mentors_spreadsheet(sheets_key='1XuZqVA7t2yGbKzcnCAsUuMW-W44L3PKreRWlSHZUYLc')
+    google_sheets_reader.load_mentors_spreadsheet(sheets_key = kitten_scraper._mentors_sheets_key)
 
     # Log in and query foster parent details (person number -> name, contact details, etc)
     #
