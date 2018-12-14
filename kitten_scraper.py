@@ -32,7 +32,7 @@ class KittenScraper(object):
             self._animal_url = config['animal_url']
             self._medical_details_url = config['medical_details_url']
             self._list_animals_url = config['list_animals_url']
-            self._mentors_sheets_key = config['mentors_sheets_key']
+            self._mentors_spreadsheet_key = config['mentors_spreadsheet_key']
             self._do_not_assign_mentor = config['do_not_assign_mentor'] if 'do_not_assign_mentor' in config else []
             self._mentors = config['mentors'] if 'mentors' in config else []
 
@@ -332,7 +332,7 @@ if __name__ == "__main__":
     # Load the Feline Mentors spreadsheet
     #
     google_sheets_reader = GoogleSheetsReader()
-    google_sheets_reader.load_mentors_spreadsheet(sheets_key = kitten_scraper._mentors_sheets_key)
+    google_sheets_reader.load_mentors_spreadsheet(sheets_key = kitten_scraper._mentors_spreadsheet_key)
 
     # Log in and query foster parent details (person number -> name, contact details, etc)
     #
