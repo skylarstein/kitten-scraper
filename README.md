@@ -47,6 +47,7 @@ Create a text file named 'config.yaml' in the kitten-scraper directory and enter
 username : your_username
 password : your_password
 mentors_spreadsheet_key : key
+```
 
 ### client_secret.json
 
