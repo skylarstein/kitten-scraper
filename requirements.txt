@@ -1,4 +1,4 @@
-PyYAML==3.13
+PyYAML==4.2b1
 xlrd==1.2.0
 selenium==3.141.0
 pygsheets==2.0.0
