@@ -129,7 +129,7 @@ class KittenReportReader(object):
             csv_rows[-1].append('"{}"'.format(animal_quantity_string))
             csv_rows[-1].append('"{}"'.format(special_message))
 
-            print('{}, {} {}{}{}'.format(name, foster_experience, ConsoleFormat.GREEN, report_notes, ConsoleFormat.END))
+            print('{}, {} {}{}{}'.format(name, foster_experience, ConsoleFormat.GREEN, report_notes.replace('\r', ', '), ConsoleFormat.END))
 
         with open(csv_filename, 'w') as outfile:
             for row in csv_rows:
@@ -261,8 +261,8 @@ class KittenReportReader(object):
             a_numbers_str = ''
             for a in animals_by_type[animal]:
                 sn_str = animal_details[a].sn if a in animal_details else 'Unknown'
-                status_str = animal_details[a].status if a in animal_details else 'Unknown'
-                a_numbers_str += '{}{} (SN: {}, Status: {})'.format('\r' if a_numbers_str else '', a, sn_str, status_str)
+                status_str = animal_details[a].status if a in animal_details else 'Status: Unknown'
+                a_numbers_str += '{}{} (S/N: {}, {})'.format('\r' if a_numbers_str else '', a, sn_str, status_str)
             result_str += '{} {}{} @ {}\r{}'.format(animal_counts[animal], animal_type.lower(), 's' if animal_counts[animal] > 1 else '', age, a_numbers_str)
 
         return result_str, animal_numbers

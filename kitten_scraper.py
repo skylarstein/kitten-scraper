@@ -1,4 +1,5 @@
 from __future__ import print_function
+from __init__ import __version__
 import os
 import re
 import sys
@@ -18,42 +19,59 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
 class KittenScraper(object):
-    def load_configuration(self):
+    def load_config_file(self):
         ''' A config.yaml configuration file is expected to be in the same directory as this script
         '''
         try:
             config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.yaml')
             config = yaml.load(open(config_file, 'r'))
-
             self._username = config['username']
             self._password = config['password']
+            self._mentors_spreadsheet_key = config['mentors_spreadsheet_key']
+
+        except yaml.YAMLError as err:
+            print_err('ERROR: Unable to parse configuration file: {}, {}'.format(config_file, err))
+            return False
+
+        except IOError as err:
+            print_err('ERROR: Unable to read configuration file: {}, {}'.format(config_file, err))
+            return False
+
+        except KeyError as err:
+            print_err('ERROR: Missing value in configuration file: {}, {}'.format(config_file, err))
+            return False
+
+        return True
+
+    def read_config_yaml(self, config_yaml):
+        ''' The mentors spreadsheet contains additional configuration data. This makes it easier to manage
+            dynamic configuration data vs rollout of new config.yaml files.
+        '''
+        try:
+            config = yaml.load(config_yaml)
             self._login_url = config['login_url']
             self._search_url = config['search_url']
             self._animal_url = config['animal_url']
             self._medical_details_url = config['medical_details_url']
             self._list_animals_url = config['list_animals_url']
-            self._mentors_spreadsheet_key = config['mentors_spreadsheet_key']
             self._do_not_assign_mentor = config['do_not_assign_mentor'] if 'do_not_assign_mentor' in config else []
             self._mentors = config['mentors'] if 'mentors' in config else []
 
-            return True
-
         except yaml.YAMLError as err:
-            print_err('ERROR: Unable to parse configuration file: {}, {}'.format(config_file, err))
-
-        except IOError as err:
-            print_err('ERROR: Unable to read configuration file: {}, {}'.format(config_file, err))
+            print_err('ERROR: Unable to read config_yaml: {}'.format(err))
+            return False
 
         except KeyError as err:
-            print_err('ERROR: Missing value in configuration file: {}, {}'.format(config_file, err))
+            print_err('ERROR: Missing value in config_yaml: {}'.format(err))
+            return False
 
-        return False
+        return True
 
     def start_browser(self, show_browser):
         ''' Instantiate the browser, configure options as needed
         '''
         chrome_options = webdriver.ChromeOptions()
-        chrome_options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36')
+        chrome_options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0.3 Safari/605.1.15')
         if not show_browser:
             chrome_options.add_argument("--headless")
 
@@ -181,7 +199,7 @@ class KittenScraper(object):
 
         emails = set()
         for email in (email for email in [email1, email2, email3, email4] if email): # add non-empties to set
-            emails.add(email)
+            emails.add(email.lower())
 
         prev_animals_fostered = self._prev_animals_fostered(person_number)
 
@@ -189,7 +207,19 @@ class KittenScraper(object):
         full_name += ' ' if len(full_name) else ''
         full_name += last_name if last_name else ''
 
-        notes = '*** Do not assign mentor (HSSV Staff)' if person_number in self._do_not_assign_mentor else ''
+        notes = ''
+
+        # 'do_not_assign_mentor' list may included person number (as number) or email (as string)
+        #
+        if person_number in self._do_not_assign_mentor:
+            notes = '*** Do not assign mentor (Staff)'
+        else:
+            do_not_assign_strings = (s for s in self._do_not_assign_mentor if isinstance(s, str))
+            for dna in do_not_assign_strings:
+                if [s for s in emails if dna.lower() in s]:
+                    notes = '*** Do not assign mentor (Staff)'
+                    break
+
         if person_number in self._mentors:
             notes += '{}*** {} is a mentor'.format('\r' if len(notes) else '', full_name)
 
@@ -284,6 +314,7 @@ class KittenScraper(object):
             return ''
 
 if __name__ == "__main__":
+    print('Welcome to KittenScraper {}'.format(__version__))
     start_time = time.time()
 
     arg_parser = ArgumentParser()
@@ -297,7 +328,17 @@ if __name__ == "__main__":
         sys.exit(0)
 
     kitten_scraper = KittenScraper()
-    if not kitten_scraper.load_configuration():
+    if not kitten_scraper.load_config_file():
+        sys.exit()
+
+    # Load the Feline Mentors spreadsheet
+    #
+    google_sheets_reader = GoogleSheetsReader()
+    config_yaml = google_sheets_reader.load_mentors_spreadsheet(sheets_key = kitten_scraper._mentors_spreadsheet_key)
+    if not config_yaml:
+        sys.exit()
+
+    if not kitten_scraper.read_config_yaml(config_yaml):
         sys.exit()
 
     kitten_report_reader = KittenReportReader()
@@ -328,11 +369,6 @@ if __name__ == "__main__":
 
     for p in foster_parents:
         print('Animals for foster parent {} = {}'.format(p, foster_parents[p]))
-
-    # Load the Feline Mentors spreadsheet
-    #
-    google_sheets_reader = GoogleSheetsReader()
-    google_sheets_reader.load_mentors_spreadsheet(sheets_key = kitten_scraper._mentors_spreadsheet_key)
 
     # Log in and query foster parent details (person number -> name, contact details, etc)
     #

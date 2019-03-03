@@ -47,22 +47,10 @@ Create a text file named 'config.yaml' in the kitten-scraper directory and enter
 username : your_username
 password : your_password
 mentors_spreadsheet_key : key
-login_url : http://url
-search_url : http://url
-list_animals_url : http://url
-animal_url : http://url
-medical_details_url : http://url
-do_not_assign_mentor :
-    - 100 # special person number
-    - 200 # special person number
-mentors :
-    - 8888 # feline foster mentor number
-    - 9999 # feline foster mentor number
-```
 
 ### client_secret.json
 
-Google Sheets integration and Google Sheets API platform access will require a 'client_secret.json' file. [Instructions by pygsheets](https://pygsheets.readthedocs.io/en/latest/authorizing.html) will assist you in creating this file. Copy 'client_secret.json' to the kitten-scraper directory.
+Google Sheets integration and Google Sheets API platform access will require a 'client_secret.json' file. [Instructions by pygsheets](https://pygsheets.readthedocs.io/en/stable/authorization.html) will assist you in creating this file. Copy 'client_secret.json' to the kitten-scraper directory.
 
 ## Command Line Arguments
 
@@ -84,5 +72,5 @@ optional arguments:
 To generate a report, run kitten-scraper.py from the command line. Specify the path to the original feline foster report xls (-i) as well as the desired output file name (-o).
 
 ```text
-$ python kitten-scraper.py -i /Users/skylar/KittenData/FosterReport-May12.xls -o /Users/skylar/KittenData/UpdatedFosterReport-May12.csv
+$ python kitten-scraper.py -i ~/Downloads/FosterReport-May12.xls -o ~/Desktop/UpdatedFosterReport-May12.csv
 ```
