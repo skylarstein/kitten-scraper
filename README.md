@@ -1,7 +1,8 @@
 # A little bit of web scraping to automate Feline Foster reports
 
-![Platform macOS | Linux](https://img.shields.io/badge/platform-macOS%20|%20Linux-brightgreen.svg)
+![Platform macOS | Linux](https://img.shields.io/badge/Platform-macOS%20|%20Linux-brightgreen.svg)
 ![Python 2.7.x | Python 3.6.x](https://img.shields.io/badge/Python-2.7.x%20|%203.6.x-brightgreen.svg)
+![Kitten Machine | Active](https://img.shields.io/badge/Kitten%20Machine-Active-brightgreen.svg)
 
 Kitten-scraper will import the daily Feline Foster xls report, automatically populate additional information for each animal and foster parent, and match foster parents to their existing Feline Foster Mentors.
 
@@ -56,7 +57,7 @@ Google Sheets integration and Google Sheets API platform access will require a '
 ## Command Line Arguments
 
 ```text
-$ python kitten-scraper.py --help
+$ python kitten_scraper.py --help
 usage: kitten-scraper.py [-h] [-i INPUT] [-o OUTPUT] [--show_browser]
 
 optional arguments:
@@ -73,5 +74,5 @@ optional arguments:
 To generate a report, run kitten-scraper.py from the command line. Specify the path to the original feline foster report xls (-i) as well as the desired output file name (-o).
 
 ```text
-$ python kitten-scraper.py -i ~/Downloads/FosterReport-May12.xls -o ~/Desktop/UpdatedFosterReport-May12.csv
+$ python kitten_scraper.py -i ~/Downloads/FosterReport-May12.xls -o ~/Desktop/UpdatedFosterReport-May12.csv
 ```

@@ -4,10 +4,8 @@ from datetime import datetime
 from kitten_utils import *
 
 class KittenReportReader(object):
-    ''' KittenReportReader will process process the incoming daily report, extend data with
-        additional provided details, and output new results to csv
+    ''' KittenReportReader will process the incoming daily report, query additional details, then output new results
     '''
-
     def __init__(self):
         self.__STATUS_DATE_COL = 0
         self.__ANIMAL_TYPE_COL = 1
@@ -17,7 +15,7 @@ class KittenReportReader(object):
         self.__FOSTER_PARENT_ID_COL = 5
 
     def open_xls(self, xls_filename):
-        ''' Open the daily report xls, perform some basic validation to make sure everything is in place.
+        ''' Open the daily report xls, perform some basic sanity checks
         '''
         try:
             self._workbook = xlrd.open_workbook(xls_filename)
@@ -34,7 +32,7 @@ class KittenReportReader(object):
                 self._sheet.row_values(0)[self.__ANIMAL_AGE_COL] != 'Age' or
                 self._sheet.row_values(0)[self.__FOSTER_PARENT_ID_COL] != 'Foster Parent ID'):
 
-                print_err('ERROR: Unexpected column layout in the report. Something unexpected has changed! {}'.format(xls_filename))
+                print_err('ERROR: Unexpected column layout in the report. Something has changed! {}'.format(xls_filename))
                 return False
 
             print_success('Loaded report {}'.format(xls_filename))
@@ -49,7 +47,7 @@ class KittenReportReader(object):
         return False
 
     def get_animal_numbers(self):
-        ''' Return a set of animal numbers found in the daily report
+        ''' Return the animal numbers found in the daily report
         '''
         animal_numbers = set()
         for row_number in range(1, self._sheet.nrows):
@@ -60,7 +58,7 @@ class KittenReportReader(object):
         return animal_numbers
 
     def output_results(self, persons_data, foster_parents, animal_details, filtered_animals, csv_filename):
-        ''' Output the complete details/status to a new csv document.
+        ''' Output the results to a new csv document
         '''
         print_success('Writing results to {}...'.format(csv_filename))
         csv_rows = []
@@ -91,7 +89,7 @@ class KittenReportReader(object):
                     special_message += '{}{}: {}'.format('\r\r' if special_message else '', a, animal_details[a].message)
 
             if prev_animals_fostered is not None:
-                foster_experience = 'NEW' if not prev_animals_fostered else '{} previous'.format(prev_animals_fostered)
+                foster_experience = 'NEW' if not prev_animals_fostered else '{}'.format(prev_animals_fostered)
             else:
                 foster_experience = ''
 
@@ -101,10 +99,10 @@ class KittenReportReader(object):
             home_number = person_data['home_phone']
             phone = ''
             if len(cell_number) >= 10: # ignore incomplete phone numbers
-                phone = 'c: {}'.format(cell_number)
+                phone = '(C) {}'.format(cell_number)
 
             if len(home_number) >= 10: # ignore incomplete phone numbers
-                phone += '{}h: {}'.format('\r' if phone else '', home_number)
+                phone += '{}(H) {}'.format('\r' if phone else '', home_number)
 
             # Build email(s) string
             #
@@ -112,11 +110,12 @@ class KittenReportReader(object):
             for e in person_data['emails']:
                 email += '{}{}'.format('\r' if email else '', e)
 
-            # I'll assume all kittens in this litter/group went into foster on the same day since this is a daily report
+            # Since we're processing a "daily report" I can assume all kittens in this group went into foster on the
+            # same date
             #
             date_received = animal_details[animal_numbers[0]].status_date
 
-            # Explicitly wrapping numbers/datestr with ="{}" to avoid Excel auto-formatting issues.
+            # Explicitly wrapping numbers/datestr with ="{}" to avoid Excel auto-formatting issues
             #
             csv_rows.append([])
             csv_rows[-1].append('"{}"'.format(report_notes))
@@ -129,7 +128,7 @@ class KittenReportReader(object):
             csv_rows[-1].append('"{}"'.format(animal_quantity_string))
             csv_rows[-1].append('"{}"'.format(special_message))
 
-            print('{}, {} {}{}{}'.format(name, foster_experience, ConsoleFormat.GREEN, report_notes.replace('\r', ', '), ConsoleFormat.END))
+            print('{} (Experience: {}) {}{}{}'.format(name, foster_experience, ConsoleFormat.GREEN, report_notes.replace('\r', ', '), ConsoleFormat.END))
 
         with open(csv_filename, 'w') as outfile:
             for row in csv_rows:
@@ -154,7 +153,7 @@ class KittenReportReader(object):
         return datetime(*xlrd.xldate_as_tuple(xlsfloat, workbook_datemode))
 
     def _copy_row_as_text(self, row_number):
-        ''' Output is written as csv so we need to stringify all types (dates in particular).
+        ''' Output is written to csv so we need to stringify all types (dates in particular).
             Explicitly wrapping numbers/datestr with ="{}" to avoid Excel auto-formatting issues.
         '''
         values = []
@@ -208,7 +207,7 @@ class KittenReportReader(object):
         return pretty_age_string, animal_type
 
     def _count_animals(self, person_number, foster_parents, animal_details):
-        ''' Count the number and age of each animal type assigned to this person number
+        ''' Count the number and age of each animal type assigned to this person
         '''
         animal_types = []
         animals_by_type = {}
@@ -234,16 +233,15 @@ class KittenReportReader(object):
                 animal_types.append(a_type)
                 animal_numbers.append(a_number)
 
-                # WARNING: Making an assumption here that same animal types will be of the same age
-                # (or at least close enough in grouped litters) so that choosing one age to share won't
-                # be much of an issue.
+                # WARNING: Making an assumption here that same animal types will be of the same age (or at least close
+                # enough in grouped together). Therefore choosing one age to share won't be much of an issue.
                 #
                 if a_age:
                     animal_ages[a_type] = a_age
 
                 animals_by_type.setdefault(a_type, []).append(a_number)
 
-        # We now have a list of all animal types. Next, create a set with total counts per type.
+        # We now have a list of all animal types. Next, create a set with total count per type.
         #
         animal_counts = {}
         for animal in set(animal_types):
@@ -258,6 +256,7 @@ class KittenReportReader(object):
             age, animal_type = self._pretty_print_animal_age(animal_ages[animal] if animal in animal_ages else '')
 
             # Include spay/neuter status with each animal number
+            #
             a_numbers_str = ''
             for a in animals_by_type[animal]:
                 sn_str = animal_details[a].sn if a in animal_details else 'Unknown'
