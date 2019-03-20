@@ -44,7 +44,7 @@ class KittenScraper(object):
         return True
 
     def read_config_yaml(self, config_yaml):
-        ''' The mentors spreadsheet contains additional configuration data. This makes it easier to manage mdynamic
+        ''' The mentors spreadsheet contains additional configuration data. This makes it easier to manage dynamic
             configuration data vs rollout of config.yaml updates.
         '''
         try:

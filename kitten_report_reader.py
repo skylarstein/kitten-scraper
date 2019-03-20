@@ -233,8 +233,8 @@ class KittenReportReader(object):
                 animal_types.append(a_type)
                 animal_numbers.append(a_number)
 
-                # WARNING: Making an assumption here that same animal types will be of the same age (or at least close
-                # enough in grouped together). Therefore choosing one age to share won't be much of an issue.
+                # NOTE: Making an assumption here that the same animal types will be of the same age, or at least
+                # close enough to be grouped together. Therefore choosing one age to share won't be much of an issue.
                 #
                 if a_age:
                     animal_ages[a_type] = a_age
