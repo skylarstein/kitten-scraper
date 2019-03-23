@@ -1,5 +1,11 @@
 # 😺 [Kitten Scraper ](https://github.com/skylarstein/kitten-scraper)Change Log
 
+## [2.0.0](https://github.com/skylarstein/kitten-scraper/compare/v1.8.0...v2.0.0) (2019-03-14)
+
+* Move most configuration to the online mentor spreadsheet. Makes it easier to update the config without new deployment
+* General cleanup and improvements
+* Update dependencies
+
 ## [1.8.0](https://github.com/skylarstein/kitten-scraper/compare/v1.7.0...v1.8.0) (2018-12-13)
 
 * Retrieve current animal status, filter out animals not currently in foster

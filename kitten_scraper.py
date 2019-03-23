@@ -1,4 +1,5 @@
 from __future__ import print_function
+from __init__ import __version__
 import os
 import re
 import sys
@@ -18,42 +19,60 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
 class KittenScraper(object):
-    def load_configuration(self):
+    def load_config_file(self):
         ''' A config.yaml configuration file is expected to be in the same directory as this script
         '''
         try:
             config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.yaml')
             config = yaml.load(open(config_file, 'r'))
-
             self._username = config['username']
             self._password = config['password']
+            self._mentors_spreadsheet_key = config['mentors_spreadsheet_key']
+
+        except yaml.YAMLError as err:
+            print_err('ERROR: Unable to parse configuration file: {}, {}'.format(config_file, err))
+            return False
+
+        except IOError as err:
+            print_err('ERROR: Unable to read configuration file: {}, {}'.format(config_file, err))
+            return False
+
+        except KeyError as err:
+            print_err('ERROR: Missing value in configuration file: {}, {}'.format(config_file, err))
+            return False
+
+        return True
+
+    def read_config_yaml(self, config_yaml):
+        ''' The mentors spreadsheet contains additional configuration data. This makes it easier to manage dynamic
+            configuration data vs rollout of config.yaml updates.
+        '''
+        try:
+            config = yaml.load(config_yaml)
             self._login_url = config['login_url']
             self._search_url = config['search_url']
             self._animal_url = config['animal_url']
             self._medical_details_url = config['medical_details_url']
             self._list_animals_url = config['list_animals_url']
-            self._mentors_spreadsheet_key = config['mentors_spreadsheet_key']
             self._do_not_assign_mentor = config['do_not_assign_mentor'] if 'do_not_assign_mentor' in config else []
             self._mentors = config['mentors'] if 'mentors' in config else []
 
-            return True
-
         except yaml.YAMLError as err:
-            print_err('ERROR: Unable to parse configuration file: {}, {}'.format(config_file, err))
-
-        except IOError as err:
-            print_err('ERROR: Unable to read configuration file: {}, {}'.format(config_file, err))
+            print_err('ERROR: Unable to read config_yaml: {}'.format(err))
+            return False
 
         except KeyError as err:
-            print_err('ERROR: Missing value in configuration file: {}, {}'.format(config_file, err))
+            print_err('ERROR: Missing value in config_yaml: {}'.format(err))
+            return False
 
-        return False
+        return True
 
     def start_browser(self, show_browser):
         ''' Instantiate the browser, configure options as needed
         '''
         chrome_options = webdriver.ChromeOptions()
-        chrome_options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36')
+        chrome_options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/605.1.15 '
+                                    '(KHTML, like Gecko) Version/12.0.3 Safari/605.1.15')
         if not show_browser:
             chrome_options.add_argument("--headless")
 
@@ -70,7 +89,7 @@ class KittenScraper(object):
         self._driver = webdriver.Chrome(chromedriver_path, chrome_options = chrome_options)
 
     def exit_browser(self):
-        ''' Close and exit the browser instance
+        ''' Close and exit the browser
         '''
         self._driver.close()
         self._driver.quit()
@@ -83,6 +102,7 @@ class KittenScraper(object):
         try:
             self._driver.set_page_load_timeout(20)
             self._driver.get(self._login_url)
+
         except TimeoutException:
             print_err('ERROR: Unable to load the login page. Please check your connection.')
             return False
@@ -95,6 +115,7 @@ class KittenScraper(object):
             self._driver.find_element_by_id("txt_password").send_keys(self._password)
             self._driver.find_element_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_btn_login').click()
             self._driver.find_element_by_id('Continue').click()
+
         except NoSuchElementException:
             print_err('ERROR: Unable to login. Please check your username/password.')
             return False
@@ -111,18 +132,22 @@ class KittenScraper(object):
             self._driver.get(self._animal_url.format(a))
             try:
                 # Dismiss alert (if found)
+                #
                 Alert(self._driver).dismiss()
             except NoAlertPresentException:
                 pass
 
             # Get Special Message text (if it exists)
+            #
             special_msg = utf8(self._get_text_by_id('specialMessagesDialog'))
 
             if special_msg:
-                # Remove text we don't care about...
+                # Remove text we don't care about
+                #
                 special_msg = re.sub(r'(?i)This is a special message. If you would like to delete it then clear the Special Message box in the General Details section of this page.', '', special_msg).strip()
 
                 # Remove empty lines
+                #
                 special_msg = os.linesep.join([s for s in special_msg.splitlines() if s])
 
             animal_details[a] = lambda: None # emulate SimpleNamespace for Python 2.7
@@ -136,7 +161,7 @@ class KittenScraper(object):
             except ValueError:
                 animal_details[a].status_date = 'Unknown'
 
-            # If this animal is currently in foster, associate to the responsible person (foster parent)
+            # If this animal is currently in foster, get the responsible person (foster parent)
             #
             if status.lower().find('in foster') >= 0 and status.lower().find('unassisted death') < 0:
                 try:
@@ -147,7 +172,8 @@ class KittenScraper(object):
             else:
                 filtered_animals.add(a)
 
-            # Get spay/neuter status from the medical details page
+            # Load spay/neuter status from the medical details page
+            #
             try:
                 self._driver.get(self._medical_details_url.format(a))
                 animal_details[a].sn = utf8(self._get_attr_by_xpath('innerText', '/html/body/center/table[2]/tbody/tr[2]/td/table/tbody/tr[4]/td[4]'))
@@ -160,7 +186,7 @@ class KittenScraper(object):
         return foster_parents, animal_details, filtered_animals
 
     def get_person_data(self, person_number, google_sheets_reader):
-        ''' Search for the given person number, return details and contact information
+        ''' Load the given person number, return details and contact information
         '''
         print('Looking up person {}... '.format(person_number), end='')
         sys.stdout.flush()
@@ -173,7 +199,7 @@ class KittenScraper(object):
         last_name      = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtLastName')
         preferred_name = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtPreferredName')
         home_phone     = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_homePhone_txtPhone3')
-        cell_phone     = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_mobilePhone_txtPhone3')		
+        cell_phone     = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_mobilePhone_txtPhone3')
         email1         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[1]/td[1]')
         email2         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[2]/td[1]')
         email3         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[3]/td[1]')
@@ -181,7 +207,7 @@ class KittenScraper(object):
 
         emails = set()
         for email in (email for email in [email1, email2, email3, email4] if email): # add non-empties to set
-            emails.add(email)
+            emails.add(email.lower())
 
         prev_animals_fostered = self._prev_animals_fostered(person_number)
 
@@ -189,7 +215,19 @@ class KittenScraper(object):
         full_name += ' ' if len(full_name) else ''
         full_name += last_name if last_name else ''
 
-        notes = '*** Do not assign mentor (HSSV Staff)' if person_number in self._do_not_assign_mentor else ''
+        notes = ''
+
+        # 'do_not_assign_mentor' list may included person number (as number) or email (as string)
+        #
+        if person_number in self._do_not_assign_mentor:
+            notes = '*** Do not assign mentor (Staff)'
+        else:
+            do_not_assign_strings = (s for s in self._do_not_assign_mentor if isinstance(s, str))
+            for dna in do_not_assign_strings:
+                if [s for s in emails if dna.lower() in s]:
+                    notes = '*** Do not assign mentor (Staff)'
+                    break
+
         if person_number in self._mentors:
             notes += '{}*** {} is a mentor'.format('\r' if len(notes) else '', full_name)
 
@@ -212,11 +250,10 @@ class KittenScraper(object):
         }
 
     def _prev_animals_fostered(self, person_number):
-        ''' Determine the total number of felines this person previously fostered. This is used
-            to determine feline foster experience level.
+        ''' Determine the total number of felines this person previously fostered. This is a useful metric for
+            experience level.
 
-            Load the list of all animals this person has been responsible for, page by page until
-            we have no more pages.
+            Load the list of all animals this person has been responsible for, page by page until we have no more pages.
         '''
         page_number = 1
         previous_feline_foster_count = 0
@@ -284,6 +321,7 @@ class KittenScraper(object):
             return ''
 
 if __name__ == "__main__":
+    print('Welcome to KittenScraper {}'.format(__version__))
     start_time = time.time()
 
     arg_parser = ArgumentParser()
@@ -296,21 +334,35 @@ if __name__ == "__main__":
         arg_parser.print_help()
         sys.exit(0)
 
+    # Load config.yaml
+    #
     kitten_scraper = KittenScraper()
-    if not kitten_scraper.load_configuration():
+    if not kitten_scraper.load_config_file():
         sys.exit()
 
+    # Load the "daily report" xls
+    #
     kitten_report_reader = KittenReportReader()
     if not kitten_report_reader.open_xls(args.input):
         sys.exit()
 
-    # Assure output path exists
+    # Assure the output path exists
     #
     output_path = os.path.dirname(args.output)
     if output_path and not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    # Load the daily kitten report
+    # Load the Feline Mentors spreadsheet
+    #
+    google_sheets_reader = GoogleSheetsReader()
+    config_yaml = google_sheets_reader.load_mentors_spreadsheet(sheets_key = kitten_scraper._mentors_spreadsheet_key)
+    if not config_yaml:
+        sys.exit()
+
+    if not kitten_scraper.read_config_yaml(config_yaml):
+        sys.exit()
+
+    # Process the daily report
     #
     animal_numbers = kitten_report_reader.get_animal_numbers()
     print('Found {} animal numbers: {}'.format(len(animal_numbers), ', '.join([str(a) for a in animal_numbers])))
@@ -319,22 +371,14 @@ if __name__ == "__main__":
     if not kitten_scraper.login():
         sys.exit()
 
-    # If an animal has had multiple foster parents, the order of associated person IDs may vary per report.
-    # The topmost ID may be the current foster parent, or it may be a previous foster parent. Also, depending
-    # on when the report is processed by this tool, a new person may already be associated to the animal.
-    # This means we need to explicitly look up the current person ID for every kitten number.
+    # Query details for each animal (current foster parent, foster status, etc)
     #
     foster_parents, animal_details, filtered_animals = kitten_scraper.get_animal_details(animal_numbers)
 
     for p in foster_parents:
         print('Animals for foster parent {} = {}'.format(p, foster_parents[p]))
 
-    # Load the Feline Mentors spreadsheet
-    #
-    google_sheets_reader = GoogleSheetsReader()
-    google_sheets_reader.load_mentors_spreadsheet(sheets_key = kitten_scraper._mentors_spreadsheet_key)
-
-    # Log in and query foster parent details (person number -> name, contact details, etc)
+    # Query foster parent details (person number -> name, contact details, etc)
     #
     persons_data = {}
     for person in foster_parents:
