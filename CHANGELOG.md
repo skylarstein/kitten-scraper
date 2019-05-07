@@ -1,5 +1,9 @@
 # 😺 [Kitten Scraper ](https://github.com/skylarstein/kitten-scraper)Change Log
 
+## [2.0.1](https://github.com/skylarstein/kitten-scraper/compare/v2.0.0...v2.0.1) (2019-05-06)
+
+* Wait for lazy-loaded content, update chromedriver
+
 ## [2.0.0](https://github.com/skylarstein/kitten-scraper/compare/v1.8.0...v2.0.0) (2019-03-14)
 
 * Move most configuration to the online mentor spreadsheet. Makes it easier to update the config without new deployment
