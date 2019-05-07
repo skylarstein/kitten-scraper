@@ -17,6 +17,8 @@ from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.common.alert import Alert
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 class KittenScraper(object):
     def load_config_file(self):
@@ -86,7 +88,8 @@ class KittenScraper(object):
             print_err('Sorry friends, I haven\'t included chromedriver for your platform ({}). Exiting now.'.format(sys.platform))
             sys.exit(0)
 
-        self._driver = webdriver.Chrome(chromedriver_path, chrome_options = chrome_options)
+        self._driver = webdriver.Chrome(chromedriver_path, options = chrome_options)
+        self._driver.set_page_load_timeout(60)
 
     def exit_browser(self):
         ''' Close and exit the browser
@@ -136,6 +139,13 @@ class KittenScraper(object):
                 Alert(self._driver).dismiss()
             except NoAlertPresentException:
                 pass
+
+            try:
+                # Wait for lazy-loaded content
+                #
+                WebDriverWait(self._driver, 10).until(EC.presence_of_element_located((By.ID, 'submitbtn2')))
+            except:
+                raise Exception('Timeout while waiting for content on search page!')
 
             # Get Special Message text (if it exists)
             #

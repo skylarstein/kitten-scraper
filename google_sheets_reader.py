@@ -14,7 +14,7 @@ class GoogleSheetsReader(object):
             config_yaml = spreadsheet.worksheet_by_title("Config")[1][0]
 
             for worksheet in spreadsheet.worksheets():
-                if worksheet.title.lower() not in ['contact info', 'config', 'updates', 'announcements', 'resources']:
+                if worksheet.title.lower() not in ['contact info', 'config', 'updates', 'announcements', 'resources', 'calendar']:
                     self.mentor_sheets.append(worksheet)
         except Exception as e:
             print_err('ERROR: Unable to load Feline Foster spreadsheet!\r\n{}, {}'.format(str(e), repr(e)))
