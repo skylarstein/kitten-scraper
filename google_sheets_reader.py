@@ -6,6 +6,8 @@ class GoogleSheetsReader(object):
         ''' Load the feline foster spreadsheet
         '''
         self.mentor_sheets = []
+        self.flattend_sheet_values = {}
+
         try:
             print_success('Loading mentors spreadsheet {}...'.format(sheets_key))
             client = pygsheets.authorize(outh_file='client_secret.json')
@@ -16,6 +18,9 @@ class GoogleSheetsReader(object):
             for worksheet in spreadsheet.worksheets():
                 if worksheet.title.lower() not in ['contact info', 'config', 'updates', 'announcements', 'resources', 'calendar']:
                     self.mentor_sheets.append(worksheet)
+                    all_values = worksheet.get_all_values(include_tailing_empty = False, include_tailing_empty_rows = False)
+                    self.flattend_sheet_values[utf8(worksheet.title)] = [utf8(item).lower() for sublist in all_values for item in sublist]
+
         except Exception as e:
             print_err('ERROR: Unable to load Feline Foster spreadsheet!\r\n{}, {}'.format(str(e), repr(e)))
             return None
@@ -30,10 +35,8 @@ class GoogleSheetsReader(object):
         match_strings = [utf8(s).lower() for s in match_strings if s]
         matching_mentors = set()
 
-        for sheet in self.mentor_sheets:
-            all_values = sheet.get_all_values(include_tailing_empty=False, include_tailing_empty_rows=False)
-            flattend = [utf8(item).lower() for sublist in all_values for item in sublist]
-            if len([item for item in flattend if any(match in item for match in match_strings)]):
-                matching_mentors.add(utf8(sheet.title))
+        for sheet_name in self.flattend_sheet_values:
+            if len([item for item in self.flattend_sheet_values[sheet_name] if any(match in item for match in match_strings)]):
+                matching_mentors.add(sheet_name)
 
         return matching_mentors
