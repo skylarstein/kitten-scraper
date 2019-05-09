@@ -1,5 +1,9 @@
 # 😺 [Kitten Scraper ](https://github.com/skylarstein/kitten-scraper)Change Log
 
+## [2.0.2](https://github.com/skylarstein/kitten-scraper/compare/v2.0.1...v2.0.2) (2019-05-08)
+
+* Cache Google Sheets data on load (performance optimization)
+
 ## [2.0.1](https://github.com/skylarstein/kitten-scraper/compare/v2.0.0...v2.0.1) (2019-05-06)
 
 * Wait for lazy-loaded content, update chromedriver
