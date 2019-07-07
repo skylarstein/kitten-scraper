@@ -1,5 +1,10 @@
 # 😺 [Kitten Scraper ](https://github.com/skylarstein/kitten-scraper)Change Log
 
+## [2.0.3](https://github.com/skylarstein/kitten-scraper/compare/v2.0.2...v2.0.3) (2019-07-07)
+
+* Calculate loss rate
+* Updated chromedriver, maybe we'll have some luck with the lost-login-cookie issue when running headless
+
 ## [2.0.2](https://github.com/skylarstein/kitten-scraper/compare/v2.0.1...v2.0.2) (2019-05-08)
 
 * Cache Google Sheets data on load (performance optimization)
