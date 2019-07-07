@@ -219,7 +219,7 @@ class KittenScraper(object):
         for email in (email for email in [email1, email2, email3, email4] if email): # add non-empties to set
             emails.add(email.lower())
 
-        prev_animals_fostered = self._prev_animals_fostered(person_number)
+        prev_animals_fostered, euthanized_count, unassisted_death_count = self._prev_animals_fostered(person_number)
 
         full_name = preferred_name if preferred_name else first_name if first_name else ''
         full_name += ' ' if len(full_name) else ''
@@ -246,17 +246,24 @@ class KittenScraper(object):
         if matching_sheets:
             notes += '{}*** Found matching mentor(s): {}'.format('\r' if len(notes) else '', ', '.join([str(s) for s in matching_sheets]))
 
+        loss_rate = 0.0
+        if prev_animals_fostered > 0:
+            loss_rate = 100.0 * (euthanized_count + unassisted_death_count) / prev_animals_fostered
+
         print('{} {}'.format(first_name, last_name))
         return {
-            'first_name'            : first_name,
-            'last_name'             : last_name,
-            'preferred_name'        : preferred_name,
-            'full_name'             : full_name,
-            'home_phone'            : home_phone,
-            'cell_phone'            : cell_phone,
-            'emails'                : emails,
-            'prev_animals_fostered' : prev_animals_fostered,
-            'notes'                 : notes
+            'first_name'             : first_name,
+            'last_name'              : last_name,
+            'preferred_name'         : preferred_name,
+            'full_name'              : full_name,
+            'home_phone'             : home_phone,
+            'cell_phone'             : cell_phone,
+            'emails'                 : emails,
+            'prev_animals_fostered'  : prev_animals_fostered,
+            'euthanized_count'       : euthanized_count,
+            'unassisted_death_count' : unassisted_death_count,
+            'loss_rate'              : loss_rate,
+            'notes'                  : notes
         }
 
     def _prev_animals_fostered(self, person_number):
@@ -267,6 +274,9 @@ class KittenScraper(object):
         '''
         page_number = 1
         previous_feline_foster_count = 0
+        euthanized_count = 0
+        unassisted_death_count = 0
+
         while True:
             self._driver.get(self._list_animals_url.format(page_number, person_number))
             try:
@@ -283,8 +293,14 @@ class KittenScraper(object):
                             #print ','.join(col.text for col in cols)
                             animal_type = cols[5].text
                             animal_status = cols[2].text
-                            if (animal_type == 'Cat' or animal_type == 'Kitten') and animal_status != 'In Foster':
-                                previous_feline_foster_count += 1
+                            if animal_type.lower().find('cat') >= 0 or animal_type.lower().find('kitten') >= 0:
+                                if animal_status.lower().find('in foster') < 0:
+                                    previous_feline_foster_count += 1
+
+                                if animal_status.lower().find('euthanized') >= 0:
+                                    euthanized_count += 1
+                                elif animal_status.lower().find('unassisted death') >= 0:
+                                    unassisted_death_count += 1
 
                     elif num_cols == 1 and cols[0].text == 'Fostered':
                         foster_tr_active = True
@@ -296,7 +312,7 @@ class KittenScraper(object):
                 break
 
             page_number = page_number + 1
-        return previous_feline_foster_count
+        return previous_feline_foster_count, euthanized_count, unassisted_death_count
 
     def _get_text_by_id(self, element_id):
         try:

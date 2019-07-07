@@ -52,7 +52,8 @@ class KittenReportReader(object):
         animal_numbers = set()
         for row_number in range(1, self._sheet.nrows):
             animal_number = self._sheet.row_values(row_number)[self.__ANIMAL_ID_COL]
-            if isinstance(animal_number, float): # xls stores all numbers as float
+            # xls stores all numbers as float, but also handle str type just in case
+            if isinstance(animal_number, float) or (isinstance(animal_number, str) and animal_number.isdigit()):
                 animal_numbers.add((int(animal_number)))
 
         return animal_numbers
@@ -65,6 +66,7 @@ class KittenReportReader(object):
 
         csv_rows.append([])
         csv_rows[-1].append('Kitten-Scraper Notes')
+        csv_rows[-1].append('Loss Rate')
         csv_rows[-1].append('Name')
         csv_rows[-1].append('E-mail')
         csv_rows[-1].append('Phone')
@@ -79,6 +81,7 @@ class KittenReportReader(object):
             name = person_data['full_name']
             prev_animals_fostered = person_data['prev_animals_fostered']
             report_notes = person_data['notes']
+            loss_rate = round(person_data['loss_rate'])
 
             animal_quantity_string, animal_numbers = self._count_animals(person_number, foster_parents, animal_details)
 
@@ -119,6 +122,7 @@ class KittenReportReader(object):
             #
             csv_rows.append([])
             csv_rows[-1].append('"{}"'.format(report_notes))
+            csv_rows[-1].append('"{}%"'.format(loss_rate))
             csv_rows[-1].append('"{}"'.format(name))
             csv_rows[-1].append('"{}"'.format(email))
             csv_rows[-1].append('"{}"'.format(phone))
@@ -128,7 +132,7 @@ class KittenReportReader(object):
             csv_rows[-1].append('"{}"'.format(animal_quantity_string))
             csv_rows[-1].append('"{}"'.format(special_message))
 
-            print('{} (Experience: {}) {}{}{}'.format(name, foster_experience, ConsoleFormat.GREEN, report_notes.replace('\r', ', '), ConsoleFormat.END))
+            print('{} (Experience: {}, Loss Rate: {}%) {}{}{}'.format(name, foster_experience, loss_rate, ConsoleFormat.GREEN, report_notes.replace('\r', ', '), ConsoleFormat.END))
 
         with open(csv_filename, 'w') as outfile:
             for row in csv_rows:
