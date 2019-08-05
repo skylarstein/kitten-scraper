@@ -249,14 +249,14 @@ class KittenScraper(object):
             sub_status = self._get_selection_by_id('subStatus')
             animal_details[a].status = '{}{}{}'.format(status, ' - ' if sub_status else '', sub_status)
 
-            try:
+            try: 
                 animal_details[a].status_date = datetime.strptime(self._get_attr_by_id('statusdate'), '%m/%d/%Y').strftime('%-d-%b-%Y')
             except ValueError:
                 animal_details[a].status_date = 'Unknown'
 
             # If this animal is currently in foster, get the responsible person (foster parent)
             #
-            if status.lower().find('in foster') >= 0 and status.lower().find('unassisted death') < 0:
+            if 'in foster' in status.lower() and 'unassisted death' not in status.lower():
                 try:
                     p = int(self._get_attr_by_xpath('href', '//*[@id="Table17"]/tbody/tr[1]/td[2]/a').split('personid=')[1])
                     foster_parents.setdefault(p, []).append(a)
@@ -365,31 +365,33 @@ class KittenScraper(object):
             try:
                 table = self._driver.find_element_by_id('Table3')
                 rows = table.find_elements(By.TAG_NAME, 'tr')
-                foster_tr_active = False
+                fostered_tr_active = False
+                agency_outgoing_tr_active = False
 
                 for row in rows:
                     cols = row.find_elements(By.TAG_NAME, 'td')
                     num_cols = len(cols)
 
                     if num_cols == 10:
-                        if foster_tr_active:
-                            #print ','.join(col.text for col in cols)
-                            animal_type = cols[5].text
-                            animal_status = cols[2].text
-                            if animal_type.lower().find('cat') >= 0 or animal_type.lower().find('kitten') >= 0:
-                                if animal_status.lower().find('in foster') < 0:
+                        animal_type = cols[5].text.lower()
+                        animal_status = cols[2].text.lower()
+                        if fostered_tr_active or agency_outgoing_tr_active:
+                            if any(s in animal_type for s in ['cat', 'kitten']):
+                                if 'in foster' not in animal_status or animal_status == 'unassisted death - in foster':
                                     previous_feline_foster_count += 1
 
-                                if animal_status.lower().find('euthanized') >= 0:
+                                if 'euthanized' in animal_status:
                                     euthanized_count += 1
-                                elif animal_status.lower().find('unassisted death') >= 0:
+                                elif 'unassisted death' in animal_status:
                                     unassisted_death_count += 1
 
-                    elif num_cols == 1 and cols[0].text == 'Fostered':
-                        foster_tr_active = True
+                    elif num_cols == 1:
+                        fostered_tr_active = cols[0].text.lower() == 'fostered'
+                        agency_outgoing_tr_active = cols[0].text.lower() == 'agency outgoing'
 
                     else:
-                        foster_tr_active = False
+                        fostered_tr_active = False
+                        agency_outgoing_tr_active = False
 
             except NoSuchElementException:
                 break
@@ -426,8 +428,8 @@ class KittenScraper(object):
             for row in table.find_elements(By.TAG_NAME, 'tr'):
                 cols = row.find_elements(By.TAG_NAME, 'td')
                 if len(cols) == 12:
-                    animal_status = cols[2].text
-                    if animal_status.lower().find('in foster') >= 0:
+                    animal_status = cols[2].text.lower()
+                    if 'in foster' in animal_status and animal_status != 'unassisted death - in foster':
                         current_animals.append(int(cols[3].text))
         except NoSuchElementException:
             pass
