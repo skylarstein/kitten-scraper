@@ -1,9 +1,15 @@
-# 😺 [Kitten Scraper ](https://github.com/skylarstein/kitten-scraper)Change Log
+# 😺 [Kitten Scraper](https://github.com/skylarstein/kitten-scraper)Change Log
+
+## [2.0.4](https://github.com/skylarstein/kitten-scraper/compare/v2.0.3...v2.0.4) (2019-08-04)
+
+* Fix missing "previous animals fostered" counts
+* Add "Current mentee status" function
+* It's been fun Python 2, but Python 3 is now required
 
 ## [2.0.3](https://github.com/skylarstein/kitten-scraper/compare/v2.0.2...v2.0.3) (2019-07-07)
 
 * Calculate loss rate
-* Updated chromedriver, maybe we'll have some luck with the lost-login-cookie issue when running headless
+* Update to chromedriver 75.0.3770.90, maybe we'll have some luck with the lost-login-cookie issue when running headless
 
 ## [2.0.2](https://github.com/skylarstein/kitten-scraper/compare/v2.0.1...v2.0.2) (2019-05-08)
 
@@ -11,7 +17,7 @@
 
 ## [2.0.1](https://github.com/skylarstein/kitten-scraper/compare/v2.0.0...v2.0.1) (2019-05-06)
 
-* Wait for lazy-loaded content, update chromedriver
+* Wait for lazy-loaded content, update chromedriver to 74.0.3729.6
 
 ## [2.0.0](https://github.com/skylarstein/kitten-scraper/compare/v1.8.0...v2.0.0) (2019-03-14)
 
@@ -51,7 +57,7 @@
 * Handle issues with daily reports which occasionally omit data (missing animal type, other corner cases)
 * Improved user-friendly error handling (empty daily reports, etc)
 * Assure output path exists
-* Chromedriver 2.40, Linux support
+* Chromedriver 2.40.565386, Linux support
 * General cleanup, organization
 
 ## [1.2.0](https://github.com/skylarstein/kitten-scraper/compare/v1.1.0...v1.2.0) (2018-06-03)
