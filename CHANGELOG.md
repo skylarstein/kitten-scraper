@@ -2,7 +2,7 @@
 
 ## [2.0.4](https://github.com/skylarstein/kitten-scraper/compare/v2.0.3...v2.0.4) (2019-08-04)
 
-* Fix missing "previous animals fostered" counts
+* Fix under-reported "previous animals fostered" counts
 * Add "Current mentee status" function
 * It's been fun Python 2, but Python 3 is now required
 

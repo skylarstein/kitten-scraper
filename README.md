@@ -24,7 +24,7 @@ $ python3 --version
 
 ## Clone the Repository and Install Dependencies
 
-Clone the repository from the command line or optionally [download the zip archive](https://github.com/skylarstein/kitten-scraper/archive/master.zip). Performing 'pip install -r requirements.txt' from the command line is required in either case.
+Clone the repository from the command line or optionally [download the zip archive](https://github.com/skylarstein/kitten-scraper/archive/master.zip). Performing 'pip3 install -r requirements.txt' from the command line is required in either case.
 
 ```text
 $ git clone https://github.com/skylarstein/kitten-scraper.git kitten-scraper
