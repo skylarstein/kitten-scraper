@@ -1,5 +1,5 @@
-PyYAML==4.2b1
+PyYAML==5.1.2
 xlrd==1.2.0
 selenium==3.141.0
-pygsheets==2.0.0
+pygsheets==2.0.2
 oauth2client==4.1.3
