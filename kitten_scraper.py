@@ -1,4 +1,3 @@
-from __future__ import print_function
 from __init__ import __version__
 import os
 import re
@@ -21,12 +20,94 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 class KittenScraper(object):
-    def load_config_file(self):
+    def run(self):
+        print('Welcome to KittenScraper {}'.format(__version__))
+        start_time = time.time()
+
+        arg_parser = ArgumentParser()
+        arg_parser.add_argument('-i', '--input', help = 'daily kitten report (xls)', required = False)
+        arg_parser.add_argument('-o', '--output', help = 'output file (csv when saving report, or txt when saving status)', required = False)
+        arg_parser.add_argument('-b', '--show_browser', help = 'show the browser window (generally for debugging)', required = False, action = 'store_true')
+        arg_parser.add_argument('-s', '--status', help = 'output current mentee status', required = False, action = 'store_true')
+        args = arg_parser.parse_args()
+
+        if (not args.status and not args.input) or not args.output:
+            arg_parser.print_help()
+            sys.exit(0)
+
+        # Load config.yaml
+        #
+        if not self._load_config_file():
+            sys.exit()
+
+        # Assure the output path exists
+        #
+        output_path = os.path.dirname(args.output)
+        if output_path and not os.path.exists(output_path):
+            os.makedirs(output_path)
+
+        # Load the Feline Foster Mentors spreadsheet
+        #
+        self.google_sheets_reader = GoogleSheetsReader()
+        config_yaml = self.google_sheets_reader.load_mentors_spreadsheet(sheets_key = self._mentors_spreadsheet_key)
+        if not config_yaml:
+            sys.exit()
+
+        # Process additional config data from the mentors spreadsheet
+        #
+        if not self._read_config_yaml(config_yaml):
+            sys.exit()
+
+        # Start the browser, log in
+        #
+        self._start_browser(args.show_browser)
+        if not self._login():
+            sys.exit()
+
+        # If we're in 'status' mode, output current mentee status and exit
+        #
+        if args.status:
+            self._get_current_mentee_status(args.output)
+            sys.exit()
+
+        # Load the "daily report" xls
+        #
+        kitten_report_reader = KittenReportReader()
+        if not kitten_report_reader.open_xls(args.input):
+            sys.exit()
+
+        # Process the daily report
+        #
+        animal_numbers = kitten_report_reader.get_animal_numbers()
+        print('Found {} animal numbers: {}'.format(len(animal_numbers), ', '.join([str(a) for a in animal_numbers])))
+
+        # Query details for each animal (current foster parent, foster status, etc)
+        #
+        foster_parents, animal_details, filtered_animals = self._get_animal_details(animal_numbers)
+
+        for p in foster_parents:
+            print('Animals for foster parent {} = {}'.format(p, foster_parents[p]))
+
+        # Query foster parent details (person number -> name, contact details, etc)
+        #
+        persons_data = {}
+        for person in foster_parents:
+            persons_data[person] = self._get_person_data(person)
+
+        self._exit_browser()
+
+        # Output the combined results to csv
+        #
+        kitten_report_reader.output_results(persons_data, foster_parents, animal_details, filtered_animals, args.output)
+
+        print('\nKitten foster report completed in {0:.3f} seconds'.format(time.time() - start_time))
+
+    def _load_config_file(self):
         ''' A config.yaml configuration file is expected to be in the same directory as this script
         '''
         try:
             config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.yaml')
-            config = yaml.load(open(config_file, 'r'))
+            config = yaml.load(open(config_file, 'r'), Loader=yaml.SafeLoader)
             self._username = config['username']
             self._password = config['password']
             self._mentors_spreadsheet_key = config['mentors_spreadsheet_key']
@@ -45,17 +126,18 @@ class KittenScraper(object):
 
         return True
 
-    def read_config_yaml(self, config_yaml):
+    def _read_config_yaml(self, config_yaml):
         ''' The mentors spreadsheet contains additional configuration data. This makes it easier to manage dynamic
             configuration data vs rollout of config.yaml updates.
         '''
         try:
-            config = yaml.load(config_yaml)
+            config = yaml.load(config_yaml, Loader=yaml.SafeLoader)
             self._login_url = config['login_url']
             self._search_url = config['search_url']
             self._animal_url = config['animal_url']
             self._medical_details_url = config['medical_details_url']
             self._list_animals_url = config['list_animals_url']
+            self._responsible_for_url = config['responsible_for_url']
             self._do_not_assign_mentor = config['do_not_assign_mentor'] if 'do_not_assign_mentor' in config else []
             self._mentors = config['mentors'] if 'mentors' in config else []
 
@@ -69,7 +151,7 @@ class KittenScraper(object):
 
         return True
 
-    def start_browser(self, show_browser):
+    def _start_browser(self, show_browser):
         ''' Instantiate the browser, configure options as needed
         '''
         chrome_options = webdriver.ChromeOptions()
@@ -91,13 +173,13 @@ class KittenScraper(object):
         self._driver = webdriver.Chrome(chromedriver_path, options = chrome_options)
         self._driver.set_page_load_timeout(60)
 
-    def exit_browser(self):
+    def _exit_browser(self):
         ''' Close and exit the browser
         '''
         self._driver.close()
         self._driver.quit()
 
-    def login(self):
+    def _login(self):
         ''' Load the login page, enter credentials, submit
         '''
         print_success('Logging in...')
@@ -125,7 +207,7 @@ class KittenScraper(object):
 
         return True
 
-    def get_animal_details(self, animal_numbers):
+    def _get_animal_details(self, animal_numbers):
         foster_parents = {}
         animal_details = {}
         filtered_animals = set()
@@ -166,14 +248,14 @@ class KittenScraper(object):
             sub_status = self._get_selection_by_id('subStatus')
             animal_details[a].status = '{}{}{}'.format(status, ' - ' if sub_status else '', sub_status)
 
-            try:
+            try: 
                 animal_details[a].status_date = datetime.strptime(self._get_attr_by_id('statusdate'), '%m/%d/%Y').strftime('%-d-%b-%Y')
             except ValueError:
                 animal_details[a].status_date = 'Unknown'
 
             # If this animal is currently in foster, get the responsible person (foster parent)
             #
-            if status.lower().find('in foster') >= 0 and status.lower().find('unassisted death') < 0:
+            if 'in foster' in status.lower() and 'unassisted death' not in status.lower():
                 try:
                     p = int(self._get_attr_by_xpath('href', '//*[@id="Table17"]/tbody/tr[1]/td[2]/a').split('personid=')[1])
                     foster_parents.setdefault(p, []).append(a)
@@ -195,7 +277,7 @@ class KittenScraper(object):
 
         return foster_parents, animal_details, filtered_animals
 
-    def get_person_data(self, person_number, google_sheets_reader):
+    def _get_person_data(self, person_number):
         ''' Load the given person number, return details and contact information
         '''
         print('Looking up person {}... '.format(person_number), end='')
@@ -242,7 +324,7 @@ class KittenScraper(object):
             notes += '{}*** {} is a mentor'.format('\r' if len(notes) else '', full_name)
 
         match_strings = emails.union([full_name])
-        matching_sheets = google_sheets_reader.find_matches_in_feline_foster_spreadsheet(match_strings)
+        matching_sheets = self.google_sheets_reader.find_matches_in_feline_foster_spreadsheet(match_strings)
         if matching_sheets:
             notes += '{}*** Found matching mentor(s): {}'.format('\r' if len(notes) else '', ', '.join([str(s) for s in matching_sheets]))
 
@@ -282,37 +364,76 @@ class KittenScraper(object):
             try:
                 table = self._driver.find_element_by_id('Table3')
                 rows = table.find_elements(By.TAG_NAME, 'tr')
-                foster_tr_active = False
+                fostered_tr_active = False
+                agency_outgoing_tr_active = False
 
                 for row in rows:
                     cols = row.find_elements(By.TAG_NAME, 'td')
                     num_cols = len(cols)
 
                     if num_cols == 10:
-                        if foster_tr_active:
-                            #print ','.join(col.text for col in cols)
-                            animal_type = cols[5].text
-                            animal_status = cols[2].text
-                            if animal_type.lower().find('cat') >= 0 or animal_type.lower().find('kitten') >= 0:
-                                if animal_status.lower().find('in foster') < 0:
+                        animal_type = cols[5].text.lower()
+                        animal_status = cols[2].text.lower()
+                        if fostered_tr_active or agency_outgoing_tr_active:
+                            if any(s in animal_type for s in ['cat', 'kitten']):
+                                if 'in foster' not in animal_status or animal_status == 'unassisted death - in foster':
                                     previous_feline_foster_count += 1
 
-                                if animal_status.lower().find('euthanized') >= 0:
+                                if 'euthanized' in animal_status:
                                     euthanized_count += 1
-                                elif animal_status.lower().find('unassisted death') >= 0:
+                                elif 'unassisted death' in animal_status:
                                     unassisted_death_count += 1
 
-                    elif num_cols == 1 and cols[0].text == 'Fostered':
-                        foster_tr_active = True
+                    elif num_cols == 1:
+                        fostered_tr_active = cols[0].text.lower() == 'fostered'
+                        agency_outgoing_tr_active = cols[0].text.lower() == 'agency outgoing'
 
                     else:
-                        foster_tr_active = False
+                        fostered_tr_active = False
+                        agency_outgoing_tr_active = False
 
             except NoSuchElementException:
                 break
 
             page_number = page_number + 1
         return previous_feline_foster_count, euthanized_count, unassisted_death_count
+
+    def _get_current_mentee_status(self, outfile):
+        ''' Retrieve animals in foster for all current mentees
+        '''
+        with open(outfile, 'w') as f:
+            current_mentees = self.google_sheets_reader.get_current_mentees()
+            for current in current_mentees:
+                print(current['mentor'])
+                f.write('{}\r\n'.format(current['mentor']))
+                if len(current['mentees']):
+                    for mentee in current['mentees']:
+                        current_animals = self._current_animals_fostered(mentee['name'], mentee['pid'])
+                        s = '  {} ({}) - {} animals {}'.format(mentee['name'].replace('\n', ' '), mentee['pid'], len(current_animals), current_animals if len(current_animals) else '')
+                        print(s)
+                        f.write('{}\r\n'.format(s))
+                else:
+                    print('  ** No current mentees **')
+                    f.write('  ** No current mentees **\r\n')
+
+                print('')
+                f.write('\r\n')
+
+    def _current_animals_fostered(self, person_name, person_number):
+        current_animals = []
+        self._driver.get(self._responsible_for_url.format(person_number))
+        try:
+            table = self._driver.find_element_by_id('Table1')
+            for row in table.find_elements(By.TAG_NAME, 'tr'):
+                cols = row.find_elements(By.TAG_NAME, 'td')
+                if len(cols) == 12:
+                    animal_status = cols[2].text.lower()
+                    if 'in foster' in animal_status and animal_status != 'unassisted death - in foster':
+                        current_animals.append(int(cols[3].text))
+        except NoSuchElementException:
+            pass
+
+        return current_animals
 
     def _get_text_by_id(self, element_id):
         try:
@@ -347,73 +468,4 @@ class KittenScraper(object):
             return ''
 
 if __name__ == "__main__":
-    print('Welcome to KittenScraper {}'.format(__version__))
-    start_time = time.time()
-
-    arg_parser = ArgumentParser()
-    arg_parser.add_argument('-i', '--input', help = 'daily kitten report (xls)', required = False)
-    arg_parser.add_argument('-o', '--output', help = 'output file (csv)', required = False)
-    arg_parser.add_argument('--show_browser', help = 'show the browser window while working', required = False, action = 'store_true')
-    args = arg_parser.parse_args()
-
-    if not args.input or not args.output:
-        arg_parser.print_help()
-        sys.exit(0)
-
-    # Load config.yaml
-    #
-    kitten_scraper = KittenScraper()
-    if not kitten_scraper.load_config_file():
-        sys.exit()
-
-    # Load the "daily report" xls
-    #
-    kitten_report_reader = KittenReportReader()
-    if not kitten_report_reader.open_xls(args.input):
-        sys.exit()
-
-    # Assure the output path exists
-    #
-    output_path = os.path.dirname(args.output)
-    if output_path and not os.path.exists(output_path):
-        os.makedirs(output_path)
-
-    # Load the Feline Mentors spreadsheet
-    #
-    google_sheets_reader = GoogleSheetsReader()
-    config_yaml = google_sheets_reader.load_mentors_spreadsheet(sheets_key = kitten_scraper._mentors_spreadsheet_key)
-    if not config_yaml:
-        sys.exit()
-
-    if not kitten_scraper.read_config_yaml(config_yaml):
-        sys.exit()
-
-    # Process the daily report
-    #
-    animal_numbers = kitten_report_reader.get_animal_numbers()
-    print('Found {} animal numbers: {}'.format(len(animal_numbers), ', '.join([str(a) for a in animal_numbers])))
-
-    kitten_scraper.start_browser(args.show_browser)
-    if not kitten_scraper.login():
-        sys.exit()
-
-    # Query details for each animal (current foster parent, foster status, etc)
-    #
-    foster_parents, animal_details, filtered_animals = kitten_scraper.get_animal_details(animal_numbers)
-
-    for p in foster_parents:
-        print('Animals for foster parent {} = {}'.format(p, foster_parents[p]))
-
-    # Query foster parent details (person number -> name, contact details, etc)
-    #
-    persons_data = {}
-    for person in foster_parents:
-        persons_data[person] = kitten_scraper.get_person_data(person, google_sheets_reader)
-
-    kitten_scraper.exit_browser()
-
-    # Output the combined results to csv
-    #
-    kitten_report_reader.output_results(persons_data, foster_parents, animal_details, filtered_animals, args.output)
-
-    print('\nKitten foster report completed in {0:.3f} seconds'.format(time.time() - start_time))
+    KittenScraper().run()

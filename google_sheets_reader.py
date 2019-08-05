@@ -40,3 +40,36 @@ class GoogleSheetsReader(object):
                 matching_mentors.add(sheet_name)
 
         return matching_mentors
+
+    def get_current_mentees(self):
+        ''' Return the current mentees assigned to each mentor
+        '''
+        current_mentees = []
+        for worksheet in self.mentor_sheets:
+            if worksheet.title.lower() == 'retired mentor':
+                continue
+            print('Loading current mentees for {}... '.format(worksheet.title), end='')
+            mentees = []
+
+            # It's much faster to grab a whole block of cells at once vs iterating through many API calls
+            #
+            max_search_rows = 50
+            cells = worksheet.range('A1:E{}'.format(max_search_rows), returnas='cells')
+            search_failed = False
+            for i in range(1, max_search_rows):
+                if i == max_search_rows - 1:
+                    search_failed = True
+                    print_err('unable to determine current mentees for mentor {}'.format(worksheet.title))
+                    mentees = []
+                    break
+                elif cells[i][0].value.lower().strip() == 'completed mentees without kittens':
+                    break
+                elif cells[i][1].value and cells[i][4].value:
+                    mentees.append({'name' : cells[i][1].value, 'pid' : int(cells[i][4].value)})
+
+            if not search_failed:
+                print('found {}'.format(len(mentees)))
+
+            current_mentees.append({ 'mentor' : worksheet.title, 'mentees' : mentees})
+
+        return current_mentees
