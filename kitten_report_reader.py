@@ -42,7 +42,7 @@ class KittenReportReader(object):
             print_err('ERROR: Unable to read xls file: {}, {}'.format(xls_filename, err))
 
         except xlrd.XLRDError as err:
-            print_err('ERROR: Unable to read xls file: {}'.format(err.message))
+            print_err('ERROR: Unable to read xls file: {}, {}'.format(xls_filename, err))
 
         return False
 

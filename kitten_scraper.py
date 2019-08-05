@@ -1,4 +1,3 @@
-from __future__ import print_function
 from __init__ import __version__
 import os
 import re
@@ -27,9 +26,9 @@ class KittenScraper(object):
 
         arg_parser = ArgumentParser()
         arg_parser.add_argument('-i', '--input', help = 'daily kitten report (xls)', required = False)
-        arg_parser.add_argument('-o', '--output', help = 'output file (csv report, or txt status)', required = False)
-        arg_parser.add_argument('--show_browser', help = 'show the browser window while working', required = False, action = 'store_true')
-        arg_parser.add_argument('-s', '--status', help = 'print current mentee status', required = False, action = 'store_true')
+        arg_parser.add_argument('-o', '--output', help = 'output file (csv when saving report, or txt when saving status)', required = False)
+        arg_parser.add_argument('-b', '--show_browser', help = 'show the browser window (generally for debugging)', required = False, action = 'store_true')
+        arg_parser.add_argument('-s', '--status', help = 'output current mentee status', required = False, action = 'store_true')
         args = arg_parser.parse_args()
 
         if (not args.status and not args.input) or not args.output:
@@ -108,7 +107,7 @@ class KittenScraper(object):
         '''
         try:
             config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.yaml')
-            config = yaml.load(open(config_file, 'r'))
+            config = yaml.load(open(config_file, 'r'), Loader=yaml.SafeLoader)
             self._username = config['username']
             self._password = config['password']
             self._mentors_spreadsheet_key = config['mentors_spreadsheet_key']
@@ -132,7 +131,7 @@ class KittenScraper(object):
             configuration data vs rollout of config.yaml updates.
         '''
         try:
-            config = yaml.load(config_yaml)
+            config = yaml.load(config_yaml, Loader=yaml.SafeLoader)
             self._login_url = config['login_url']
             self._search_url = config['search_url']
             self._animal_url = config['animal_url']

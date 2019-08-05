@@ -1,10 +1,10 @@
-# A little bit of web scraping to automate Feline Foster reports
+# A little bit of web scraping and automation for the Feline Foster Mentor Program
 
 ![Platform macOS | Linux](https://img.shields.io/badge/Platform-macOS%20|%20Linux-brightgreen.svg)
-![Python 2.7.x | Python 3.6.x](https://img.shields.io/badge/Python-2.7.x%20|%203.6.x-brightgreen.svg)
+![Python | 3.6.x](https://img.shields.io/badge/Python-3.6.x-brightgreen.svg)
 ![Kitten Machine | Active](https://img.shields.io/badge/Kitten%20Machine-Active-brightgreen.svg)
 
-Kitten-scraper will import the daily Feline Foster xls report, automatically populate additional information for each animal and foster parent, and match foster parents to their existing Feline Foster Mentors.
+Kitten-scraper will import the daily Feline Foster report, automatically retrieve additional information for each animal and foster parent, and match foster parents to their existing Feline Foster Mentors.
 
 ```text
                                                                      _                ___       _.--.
@@ -16,6 +16,12 @@ Kitten-scraper will import the daily Feline Foster xls report, automatically pop
                                                  |_|                    {_.-``-'         {_/
 ```
 
+## Assure you have Python 3 installed
+
+```text
+$ python3 --version
+```
+
 ## Clone the Repository and Install Dependencies
 
 Clone the repository from the command line or optionally [download the zip archive](https://github.com/skylarstein/kitten-scraper/archive/master.zip). Performing 'pip install -r requirements.txt' from the command line is required in either case.
@@ -23,19 +29,7 @@ Clone the repository from the command line or optionally [download the zip archi
 ```text
 $ git clone https://github.com/skylarstein/kitten-scraper.git kitten-scraper
 $ cd kitten-scraper
-$ pip install -r requirements.txt
-```
-
-Don't have pip installed? Two options:
-
-```text
-$ sudo easy_install pip
-```
-
-or..
-
-```text
-$ curl https://bootstrap.pypa.io/get-pip.py | sudo python
+$ pip3 install -r requirements.txt
 ```
 
 ## Setup and Configuration
@@ -57,7 +51,7 @@ Google Sheets integration and Google Sheets API platform access will require a '
 ## Command Line Arguments
 
 ```text
-$ python kitten_scraper.py --help
+$ python3 kitten_scraper.py --help
 usage: kitten-scraper.py [-h] [-i INPUT] [-o OUTPUT] [--show_browser]
 
 optional arguments:
@@ -65,8 +59,9 @@ optional arguments:
   -i INPUT, --input INPUT
                         daily kitten report (xls)
   -o OUTPUT, --output OUTPUT
-                        output file (csv)
-  --show_browser        show the browser window while working
+                        output file (csv when saving report, or txt when saving status)
+  -b, --show_browser    show the browser window (generally for debugging)
+  -s, --status          output current mentee status
 ```
 
 ## Let's Do This
@@ -74,5 +69,5 @@ optional arguments:
 To generate a report, run kitten-scraper.py from the command line. Specify the path to the original feline foster report xls (-i) as well as the desired output file name (-o).
 
 ```text
-$ python kitten_scraper.py -i ~/Downloads/FosterReport-May12.xls -o ~/Desktop/UpdatedFosterReport-May12.csv
+$ python3 kitten_scraper.py -i ~/Downloads/FosterReport-May12.xls -o ~/Desktop/UpdatedFosterReport-May12.csv
 ```
