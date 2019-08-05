@@ -1,4 +1,4 @@
-# 😺 [Kitten Scraper](https://github.com/skylarstein/kitten-scraper)Change Log
+# 😺 [Kitten Scraper](https://github.com/skylarstein/kitten-scraper) Change Log
 
 ## [2.0.4](https://github.com/skylarstein/kitten-scraper/compare/v2.0.3...v2.0.4) (2019-08-04)
 
