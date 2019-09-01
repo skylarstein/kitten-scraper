@@ -18,6 +18,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from types import SimpleNamespace
 
 class KittenScraper(object):
     def run(self):
@@ -242,7 +243,7 @@ class KittenScraper(object):
                 #
                 special_msg = os.linesep.join([s for s in special_msg.splitlines() if s])
 
-            animal_details[a] = lambda: None # emulate SimpleNamespace for Python 2.7
+            animal_details[a] = SimpleNamespace()
             animal_details[a].message = special_msg
             status = self._get_selection_by_id('status')
             sub_status = self._get_selection_by_id('subStatus')
@@ -429,7 +430,9 @@ class KittenScraper(object):
                 if len(cols) == 12:
                     animal_status = cols[2].text.lower()
                     if 'in foster' in animal_status and animal_status != 'unassisted death - in foster':
-                        current_animals.append(int(cols[3].text))
+                        animal_number = int(cols[3].text)
+                        if animal_number not in current_animals: # ignore duplicates
+                            current_animals.append(animal_number)
         except NoSuchElementException:
             pass
 

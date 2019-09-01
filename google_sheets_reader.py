@@ -62,10 +62,15 @@ class GoogleSheetsReader(object):
                     print_err('unable to determine current mentees for mentor {}'.format(worksheet.title))
                     mentees = []
                     break
+
                 elif cells[i][0].value.lower().strip() == 'completed mentees without kittens':
-                    break
+                    break # We've reach the end of "active mentee" rows
+
                 elif cells[i][1].value and cells[i][4].value:
-                    mentees.append({'name' : cells[i][1].value, 'pid' : int(cells[i][4].value)})
+                    mentee_name = cells[i][1].value
+                    pid = int(cells[i][4].value)
+                    if not [mentee for mentee in mentees if mentee['pid'] == pid]: # ignore duplicate mentees
+                        mentees.append({'name' : mentee_name, 'pid' : pid})
 
             if not search_failed:
                 print('found {}'.format(len(mentees)))
