@@ -18,7 +18,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from types import SimpleNamespace
 
 class KittenScraper(object):
     def run(self):
@@ -241,16 +240,16 @@ class KittenScraper(object):
                 #
                 special_msg = os.linesep.join([s for s in special_msg.splitlines() if s])
 
-            animal_details[a] = SimpleNamespace()
-            animal_details[a].message = special_msg
+            animal_details[a] = {}
+            animal_details[a]['message'] = special_msg
             status = self._get_selection_by_id('status')
             sub_status = self._get_selection_by_id('subStatus')
-            animal_details[a].status = '{}{}{}'.format(status, ' - ' if sub_status else '', sub_status)
+            animal_details[a]['status'] = '{}{}{}'.format(status, ' - ' if sub_status else '', sub_status)
 
             try: 
-                animal_details[a].status_date = datetime.strptime(self._get_attr_by_id('statusdate'), '%m/%d/%Y').strftime('%-d-%b-%Y')
+                animal_details[a]['status_date'] = datetime.strptime(self._get_attr_by_id('statusdate'), '%m/%d/%Y').strftime('%-d-%b-%Y')
             except ValueError:
-                animal_details[a].status_date = 'Unknown'
+                animal_details[a]['status_date'] = 'Unknown'
 
             # If this animal is currently in foster, get the responsible person (foster parent)
             #
@@ -263,8 +262,8 @@ class KittenScraper(object):
             else:
                 filtered_animals.add(a)
 
-            animal_details[a].sn = self._get_spay_neuter_status(a)
-            print('{}'.format(animal_details[a].status))
+            animal_details[a]['sn'] = self._get_spay_neuter_status(a)
+            print('{}'.format(animal_details[a]['status']))
 
         return foster_parents, animal_details, filtered_animals
 
