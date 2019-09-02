@@ -56,12 +56,16 @@ usage: kitten-scraper.py [-h] [-i INPUT] [-o OUTPUT] [--show_browser]
 
 optional arguments:
   -h, --help            show this help message and exit
+
   -i INPUT, --input INPUT
                         specify the daily kitten report (xls)
+
   -o OUTPUT, --output OUTPUT
                         specify an output file (csv)
+
   -s STATUS, --status STATUS
                         save current mentee status to the given file (txt)
+
   -b, --show_browser    show the browser window (generally for debugging)
 ```
 
