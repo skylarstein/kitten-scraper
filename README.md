@@ -57,11 +57,12 @@ usage: kitten-scraper.py [-h] [-i INPUT] [-o OUTPUT] [--show_browser]
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT, --input INPUT
-                        daily kitten report (xls)
+                        specify the daily kitten report (xls)
   -o OUTPUT, --output OUTPUT
-                        output file (csv when saving report, or txt when saving status)
+                        specify an output file (csv)
+  -s STATUS, --status STATUS
+                        save current mentee status to the given file (txt)
   -b, --show_browser    show the browser window (generally for debugging)
-  -s, --status          output current mentee status
 ```
 
 ## Let's Do This
@@ -69,5 +70,5 @@ optional arguments:
 To generate a report, run kitten-scraper.py from the command line. Specify the path to the original feline foster report xls (-i) as well as the desired output file name (-o).
 
 ```text
-$ python3 kitten_scraper.py -i ~/Downloads/FosterReport-May12.xls -o ~/Desktop/UpdatedFosterReport-May12.csv
+$ python3 kitten_scraper.py --input ~/Downloads/FosterReport-May12.xls --output ~/Desktop/UpdatedFosterReport-May12.csv
 ```

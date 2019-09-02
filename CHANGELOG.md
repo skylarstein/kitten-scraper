@@ -1,5 +1,9 @@
 # 😺 [Kitten Scraper](https://github.com/skylarstein/kitten-scraper) Change Log
 
+## [2.0.5](https://github.com/skylarstein/kitten-scraper/compare/v2.0.4...v2.0.5) (2019-09-02)
+
+* Mentee status report improvements (remove duplicates, include S/N status)
+
 ## [2.0.4](https://github.com/skylarstein/kitten-scraper/compare/v2.0.3...v2.0.4) (2019-08-04)
 
 * Fix under-reported "previous animals fostered" counts

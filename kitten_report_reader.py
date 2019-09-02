@@ -87,9 +87,9 @@ class KittenReportReader(object):
 
             special_message = ''
             for a in animal_numbers:
-                msg = animal_details[a].message
+                msg = animal_details[a]['message']
                 if msg:
-                    special_message += '{}{}: {}'.format('\r\r' if special_message else '', a, animal_details[a].message)
+                    special_message += '{}{}: {}'.format('\r\r' if special_message else '', a, animal_details[a]['message'])
 
             if prev_animals_fostered is not None:
                 foster_experience = 'NEW' if not prev_animals_fostered else '{}'.format(prev_animals_fostered)
@@ -116,7 +116,7 @@ class KittenReportReader(object):
             # Since we're processing a "daily report" I can assume all kittens in this group went into foster on the
             # same date
             #
-            date_received = animal_details[animal_numbers[0]].status_date
+            date_received = animal_details[animal_numbers[0]]['status_date']
 
             # Explicitly wrapping numbers/datestr with ="{}" to avoid Excel auto-formatting issues
             #
@@ -146,7 +146,7 @@ class KittenReportReader(object):
             if len(filtered_animals):
                 outfile.write('\n\n\n*** Animals not in foster\n')
                 for a in filtered_animals:
-                    outfile.write('{} - {}\n'.format(a, animal_details[a].status))
+                    outfile.write('{} - {}\n'.format(a, animal_details[a]['status']))
 
     def _xlsfloat_as_datetime(self, xlsfloat, workbook_datemode):
         ''' Convert Excel float date type to datetime
@@ -263,8 +263,8 @@ class KittenReportReader(object):
             #
             a_numbers_str = ''
             for a in animals_by_type[animal]:
-                sn_str = animal_details[a].sn if a in animal_details else 'Unknown'
-                status_str = animal_details[a].status if a in animal_details else 'Status: Unknown'
+                sn_str = animal_details[a]['sn'] if a in animal_details else 'Unknown'
+                status_str = animal_details[a]['status'] if a in animal_details else 'Status: Unknown'
                 a_numbers_str += '{}{} (S/N: {}, {})'.format('\r' if a_numbers_str else '', a, sn_str, status_str)
             result_str += '{} {}{} @ {}\r{}'.format(animal_counts[animal], animal_type.lower(), 's' if animal_counts[animal] > 1 else '', age, a_numbers_str)
 
