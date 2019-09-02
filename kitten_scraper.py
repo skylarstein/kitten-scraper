@@ -24,10 +24,10 @@ class KittenScraper(object):
         print('Welcome to KittenScraper {}'.format(__version__))
 
         arg_parser = ArgumentParser()
-        arg_parser.add_argument('-i', '--input', help = 'daily kitten report (xls)', required = False)
-        arg_parser.add_argument('-o', '--output', help = 'output file (csv)', required = False)
+        arg_parser.add_argument('-i', '--input', help = 'specify the daily kitten report (xls)', required = False)
+        arg_parser.add_argument('-o', '--output', help = 'specify an output file (csv)', required = False)
+        arg_parser.add_argument('-s', '--status', help = 'save current mentee status to the given file (txt)', required = False)
         arg_parser.add_argument('-b', '--show_browser', help = 'show the browser window (generally for debugging)', required = False, action = 'store_true')
-        arg_parser.add_argument('-s', '--status', help = 'output current mentee status to file (txt)', required = False)
         args = arg_parser.parse_args()
 
         if not (args.input and args.output) and not args.status:
