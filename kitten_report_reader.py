@@ -6,13 +6,17 @@ from kitten_utils import *
 class KittenReportReader(object):
     ''' KittenReportReader will process the incoming daily report, query additional details, then output new results
     '''
-    def __init__(self):
-        self.__STATUS_DATE_COL = 0
-        self.__ANIMAL_TYPE_COL = 1
-        self.__ANIMAL_ID_COL = 2
-        self.__ANIMAL_NAME_COL = 3
-        self.__ANIMAL_AGE_COL = 4
-        self.__FOSTER_PARENT_ID_COL = 5
+    def __init__(self, canine_mode):
+        self.STATUS_DATE_COL = 0
+        self.ANIMAL_TYPE_COL = 1
+        self.ANIMAL_ID_COL = 2
+        self.ANIMAL_NAME_COL = 3
+        self.ANIMAL_AGE_COL = 4
+        self.FOSTER_PARENT_ID_COL = 5
+
+        self.canine_mode = canine_mode
+        self.ADULT_ANIMAL_TYPE = 'cat' if not canine_mode else 'dog'
+        self.YOUNG_ANIMAL_TYPE = 'kitten' if not canine_mode else 'puppy'
 
     def open_xls(self, xls_filename):
         ''' Open the daily report xls, perform some basic sanity checks
@@ -25,12 +29,12 @@ class KittenReportReader(object):
                 print_err('ERROR: I\'m afraid you have an empty report: {}'.format(xls_filename))
                 return False
 
-            if (self._sheet.row_values(0)[self.__STATUS_DATE_COL] != 'Datetime of Current Status Date' or
-                self._sheet.row_values(0)[self.__ANIMAL_TYPE_COL] != 'Current Animal Type' or
-                self._sheet.row_values(0)[self.__ANIMAL_ID_COL] != 'AnimalID' or
-                self._sheet.row_values(0)[self.__ANIMAL_NAME_COL] != 'Animal Name' or
-                self._sheet.row_values(0)[self.__ANIMAL_AGE_COL] != 'Age' or
-                self._sheet.row_values(0)[self.__FOSTER_PARENT_ID_COL] != 'Foster Parent ID'):
+            if (self._sheet.row_values(0)[self.STATUS_DATE_COL] != 'Datetime of Current Status Date' or
+                self._sheet.row_values(0)[self.ANIMAL_TYPE_COL] != 'Current Animal Type' or
+                self._sheet.row_values(0)[self.ANIMAL_ID_COL] != 'AnimalID' or
+                self._sheet.row_values(0)[self.ANIMAL_NAME_COL] != 'Animal Name' or
+                self._sheet.row_values(0)[self.ANIMAL_AGE_COL] != 'Age' or
+                self._sheet.row_values(0)[self.FOSTER_PARENT_ID_COL] != 'Foster Parent ID'):
 
                 print_err('ERROR: Unexpected column layout in the report. Something has changed! {}'.format(xls_filename))
                 return False
@@ -51,7 +55,7 @@ class KittenReportReader(object):
         '''
         animal_numbers = set()
         for row_number in range(1, self._sheet.nrows):
-            animal_number = self._sheet.row_values(row_number)[self.__ANIMAL_ID_COL]
+            animal_number = self._sheet.row_values(row_number)[self.ANIMAL_ID_COL]
             # xls stores all numbers as float, but also handle str type just in case
             if isinstance(animal_number, float) or (isinstance(animal_number, str) and animal_number.isdigit()):
                 animal_numbers.add((int(animal_number)))
@@ -191,21 +195,21 @@ class KittenReportReader(object):
         try:
             # For the sake of brevity in the spreadsheet, I'll shorten the age string when I can.
             # For example, if an animal is > 1 year old, there's no huge need to include months and weeks.
-            # I'll also return an animal_type string ['kitten', 'cat'] based on age since daily reports
+            # I'll also generate an animal_type string (kitten/cat/puppy/dog) based on age, since daily reports
             # occasionally fail to include this information.
             #
             (years, months, weeks) = re.search(r'(\d+) years (\d+) months (\d+) weeks', age_string).groups()
             if int(years) > 0:
                 pretty_age_string = '{} years'.format(years)
-                animal_type = 'cat'
+                animal_type = self.ADULT_ANIMAL_TYPE
             elif int(months) >= 3:
                 pretty_age_string = '{} months'.format(months)
-                animal_type = 'kitten' if int(months) <= 6 else 'cat'
+                animal_type = self.YOUNG_ANIMAL_TYPE if int(months) <= 6 else self.ADULT_ANIMAL_TYPE
             else:
                 pretty_age_string = '{} weeks'.format(int(weeks) + int(months) * 4)
-                animal_type = 'kitten'
+                animal_type = self.YOUNG_ANIMAL_TYPE
         except:
-            animal_type = 'kitten' # I have no idea, but 'kitten' is a safe bet
+            animal_type = self.YOUNG_ANIMAL_TYPE # I have no idea, but self.YOUNG_ANIMAL_TYPE is a safe bet
             pretty_age_string = 'Unknown Age'
 
         return pretty_age_string, animal_type
@@ -219,12 +223,12 @@ class KittenReportReader(object):
         animal_ages = {}
         last_animal_type = ''
         for row_number in range(1, self._sheet.nrows): # ignore header
-            a_number = int(self._sheet.row_values(row_number)[self.__ANIMAL_ID_COL] or 0)
+            a_number = int(self._sheet.row_values(row_number)[self.ANIMAL_ID_COL] or 0)
             if not a_number:
                 continue
 
-            a_type = self._sheet.row_values(row_number)[self.__ANIMAL_TYPE_COL]
-            a_age = self._sheet.row_values(row_number)[self.__ANIMAL_AGE_COL]
+            a_type = self._sheet.row_values(row_number)[self.ANIMAL_TYPE_COL]
+            a_age = self._sheet.row_values(row_number)[self.ANIMAL_AGE_COL]
             p_number = next((p for p in foster_parents if a_number in foster_parents[p]), None)
 
             if not a_type:

@@ -39,6 +39,9 @@ class KittenScraper(object):
         if not self._load_config_file():
             sys.exit()
 
+        if self._canine_mode:
+            print_warn('** Canine Mode is Active **')
+
         # Load the Feline Foster Mentors spreadsheet
         #
         self.google_sheets_reader = GoogleSheetsReader()
@@ -63,13 +66,13 @@ class KittenScraper(object):
             start_time = time.time()
             self._make_dir(args.status)
             self._get_current_mentee_status(args.status)
-            print('Status completed in {0:.3f} seconds. Written to {1}\n'.format(time.time() - start_time, args.status))
+            print('Status completed in {0:.0f} seconds. Written to {1}\n'.format(time.time() - start_time, args.status))
 
         if args.input:
             # Load the "daily report" xls
             #
             start_time = time.time()
-            kitten_report_reader = KittenReportReader()
+            kitten_report_reader = KittenReportReader(self._canine_mode)
             if not kitten_report_reader.open_xls(args.input):
                 sys.exit()
 
@@ -96,7 +99,10 @@ class KittenScraper(object):
             self._make_dir(args.output)
             kitten_report_reader.output_results(persons_data, foster_parents, animal_details, filtered_animals, args.output)
 
-            print('\nKitten foster report completed in {0:.3f} seconds. Written to {1}'.format(time.time() - start_time, args.output))
+            print('\n{0} foster report completed in {1:.0f} seconds. Written to {2}'.format(
+                'Feline' if not self._canine_mode else 'Canine',
+                time.time() - start_time,
+                args.output))
 
         self._exit_browser()
 
@@ -109,6 +115,7 @@ class KittenScraper(object):
             self._username = config['username']
             self._password = config['password']
             self._mentors_spreadsheet_key = config['mentors_spreadsheet_key']
+            self._canine_mode = config['canine_mode']
 
         except yaml.YAMLError as err:
             print_err('ERROR: Unable to parse configuration file: {}, {}'.format(config_file, err))
@@ -375,7 +382,8 @@ class KittenScraper(object):
                         animal_type = cols[5].text.lower()
                         animal_status = cols[2].text.lower()
                         if fostered_tr_active or agency_outgoing_tr_active:
-                            if any(s in animal_type for s in ['cat', 'kitten']):
+                            target_types = ['cat', 'kitten'] if not self._canine_mode else ['dog', 'puppy']
+                            if any(s in animal_type for s in target_types):
                                 if 'in foster' not in animal_status or animal_status == 'unassisted death - in foster':
                                     previous_feline_foster_count += 1
 
