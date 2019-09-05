@@ -54,21 +54,25 @@ class GoogleSheetsReader(object):
             # It's much faster to grab a whole block of cells at once vs iterating through many API calls
             #
             max_search_rows = 50
-            cells = worksheet.range('A1:E{}'.format(max_search_rows), returnas='cells')
+            cells = worksheet.range('A1:G{}'.format(max_search_rows), returnas='cells')
+
+            name_col_id = self._find_column_by_name(cells, 'Name')
+            pid_col_id = self._find_column_by_name(cells, 'ID')
+
             search_failed = False
             for i in range(1, max_search_rows):
                 if i == max_search_rows - 1:
                     search_failed = True
-                    print_err('unable to determine current mentees for mentor {}'.format(worksheet.title))
+                    print_err('Unable to determine current mentees for mentor {}'.format(worksheet.title))
                     mentees = []
                     break
 
                 elif cells[i][0].value.lower().strip() == 'completed mentees without kittens':
                     break # We've reach the end of "active mentee" rows
 
-                elif cells[i][1].value and cells[i][4].value:
-                    mentee_name = cells[i][1].value
-                    pid = int(cells[i][4].value)
+                elif cells[i][name_col_id].value and cells[i][pid_col_id].value:
+                    mentee_name = cells[i][name_col_id].value
+                    pid = int(cells[i][pid_col_id].value)
                     if not [mentee for mentee in mentees if mentee['pid'] == pid]: # ignore duplicate mentees
                         mentees.append({'name' : mentee_name, 'pid' : pid})
 
@@ -78,3 +82,9 @@ class GoogleSheetsReader(object):
             current_mentees.append({ 'mentor' : worksheet.title, 'mentees' : mentees})
 
         return current_mentees
+
+    def _find_column_by_name(self, cells, name):
+        for n in range(0, len(cells[0])):
+            if cells[0][n].value == name:
+                return n
+        return 0

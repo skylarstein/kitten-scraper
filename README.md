@@ -43,6 +43,10 @@ username : your_username
 password : your_password
 mentors_spreadsheet_key : key
 ```
+Bonus configuration: canine mode! There are some slight differences when running Kitten Scraper with Canine Foster reports. To enable canine mode, add the following line to your config.yaml file:
+```yaml
+canine_mode : True
+```
 
 ### client_secret.json
 
@@ -71,8 +75,14 @@ optional arguments:
 
 ## Let's Do This
 
-To generate a report, run kitten-scraper.py from the command line. Specify the path to the original feline foster report xls (-i) as well as the desired output file name (-o).
+To generate a report, run kitten-scraper.py from the command line. Specify the path to the original feline foster report xls (--input) as well as the desired output file name (--output):
 
 ```text
 $ python3 kitten_scraper.py --input ~/Downloads/FosterReport-May12.xls --output ~/Desktop/UpdatedFosterReport-May12.csv
+```
+
+To create a mentee status report, use the --status option to save status to a given file:
+
+```text
+$ python3 kitten_scraper.py --status ~/Desktop/status.txt
 ```
