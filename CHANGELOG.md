@@ -1,5 +1,9 @@
 # 😺 [Kitten Scraper](https://github.com/skylarstein/kitten-scraper) Change Log
 
+## [2.0.6](https://github.com/skylarstein/kitten-scraper/compare/v2.0.5...v2.0.6) (2019-09-09)
+
+* Kitten Scraper now supports canine mode, how about that?
+
 ## [2.0.5](https://github.com/skylarstein/kitten-scraper/compare/v2.0.4...v2.0.5) (2019-09-02)
 
 * Mentee status report improvements (remove duplicates, include S/N status)
