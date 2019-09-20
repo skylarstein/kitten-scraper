@@ -71,6 +71,8 @@ optional arguments:
                         save current mentee status to the given file (txt)
 
   -b, --show_browser    show the browser window (generally for debugging)
+
+  -c, --canine_mode     enable canine mode
 ```
 
 ## Let's Do This
