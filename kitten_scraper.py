@@ -28,6 +28,7 @@ class KittenScraper(object):
         arg_parser.add_argument('-o', '--output', help = 'specify an output file (csv)', required = False)
         arg_parser.add_argument('-s', '--status', help = 'save current mentee status to the given file (txt)', required = False)
         arg_parser.add_argument('-b', '--show_browser', help = 'show the browser window (generally for debugging)', required = False, action = 'store_true')
+        arg_parser.add_argument('-c', '--canine_mode', help = 'enable canine mode', required = False, action = 'store_true')
         args = arg_parser.parse_args()
 
         if not (args.input and args.output) and not args.status:
@@ -38,6 +39,9 @@ class KittenScraper(object):
         #
         if not self._load_config_file():
             sys.exit()
+
+        if args.canine_mode:
+            self._canine_mode = True
 
         if self._canine_mode:
             print_warn('** Canine Mode is Active **')
@@ -115,7 +119,7 @@ class KittenScraper(object):
             self._username = config['username']
             self._password = config['password']
             self._mentors_spreadsheet_key = config['mentors_spreadsheet_key']
-            self._canine_mode = config['canine_mode']
+            self._canine_mode = config['canine_mode'] if 'canine_mode' in config else False
 
         except yaml.YAMLError as err:
             print_err('ERROR: Unable to parse configuration file: {}, {}'.format(config_file, err))
