@@ -1,5 +1,9 @@
 # 😺 [Kitten Scraper](https://github.com/skylarstein/kitten-scraper) Change Log
 
+## [2.0.8](https://github.com/skylarstein/kitten-scraper/compare/v2.0.7...v2.0.8) (2019-10-08)
+
+* Adds Windows support
+
 ## [2.0.7](https://github.com/skylarstein/kitten-scraper/compare/v2.0.6...v2.0.7) (2019-09-19)
 
 * Default canine_mode = False if not found in config.yaml, allow enable from command line
