@@ -1,12 +1,15 @@
 import sys
 
 class ConsoleFormat(object):
-    GREEN     = '\033[92m'
-    YELLOW    = '\033[93m'
-    RED       = '\033[91m'
-    BOLD      = '\033[1m'
-    UNDERLINE = '\033[4m'
-    END       = '\033[0m'
+    if not sys.platform.startswith('win32'):
+        GREEN     = '\033[92m'
+        YELLOW    = '\033[93m'
+        RED       = '\033[91m'
+        BOLD      = '\033[1m'
+        UNDERLINE = '\033[4m'
+        END       = '\033[0m'
+    else:
+        GREEN = YELLOW = RED = BOLD = UNDERLINE = END = ''
 
 def print_success(msg):
     print('{}{}{}'.format(ConsoleFormat.GREEN, msg, ConsoleFormat.END))

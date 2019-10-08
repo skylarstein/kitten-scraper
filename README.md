@@ -1,6 +1,6 @@
-# A little bit of web scraping and automation for the Feline Foster Mentor Program
+# A little bit of web scraping and automation for the Feline / Canine Foster Mentor Program
 
-![Platform macOS | Linux](https://img.shields.io/badge/Platform-macOS%20|%20Linux-brightgreen.svg)
+![Platform macOS | Linux](https://img.shields.io/badge/Platform-macOS%20|%20Linux%20|%20Windows-brightgreen.svg)
 ![Python | 3.6.x](https://img.shields.io/badge/Python-3.6.x-brightgreen.svg)
 ![Kitten Machine | Active](https://img.shields.io/badge/Kitten%20Machine-Active-brightgreen.svg)
 
@@ -21,6 +21,10 @@ Kitten-scraper will import the daily Feline Foster report, automatically retriev
 ```text
 $ python3 --version
 ```
+
+## Assure you have the Chrome web browser installed
+
+https://www.google.com/chrome/
 
 ## Clone the Repository and Install Dependencies
 

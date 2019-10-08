@@ -175,6 +175,9 @@ class KittenScraper(object):
             chromedriver_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'bin/mac64/chromedriver')
         elif sys.platform.startswith('linux'):
             chromedriver_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'bin/linux64/chromedriver')
+        elif sys.platform.startswith('win32'):
+            chromedriver_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'bin/win32/chromedriver')
+            chrome_options.add_experimental_option('excludeSwitches', ['enable-logging']) # chromedriver complains a lot on Windows
         else:
             print_err('Sorry friends, I haven\'t included chromedriver for your platform ({}). Exiting now.'.format(sys.platform))
             sys.exit(0)
