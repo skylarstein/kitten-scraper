@@ -18,7 +18,10 @@ Kitten-scraper will import the daily Feline Foster report, automatically retriev
 
 ## Assure you have Python 3 installed
 
+*Note: Depending on your installation, the 'python3' command may be available as 'python'. Same story with the 'pip3' command mentioned below - it may instead simply be 'pip'. You can check the version from the command line as seen below. Use whichever command responds with Python version 3.x.x*
+
 ```text
+$ python --version
 $ python3 --version
 ```
 
