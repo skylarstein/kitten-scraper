@@ -3,3 +3,4 @@ xlrd==1.2.0
 selenium==3.141.0
 pygsheets==2.0.2
 oauth2client==4.1.3
+boxsdk==2.6.1

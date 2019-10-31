@@ -6,7 +6,8 @@ import time
 import yaml
 from argparse import ArgumentParser
 from datetime import datetime
-from google_sheets_reader import GoogleSheetsReader
+from box_sheet_reader import BoxSheetReader
+from google_sheets_reader import GoogleSheetReader
 from kitten_report_reader import KittenReportReader
 from kitten_utils import *
 from selenium import webdriver
@@ -48,18 +49,26 @@ class KittenScraper(object):
 
         # Load the Feline Foster Mentors spreadsheet
         #
-        self.google_sheets_reader = GoogleSheetsReader()
+        if self._google_spreadsheet_key and self._google_client_secret:
+            self.mentor_sheet_reader = GoogleSheetReader()
+            self._additional_config_yaml = self.mentor_sheet_reader.load_mentors_spreadsheet({
+                'google_spreadsheet_key' : self._google_spreadsheet_key,
+                'google_client_secret' : self._google_client_secret})
 
-        config_yaml = self.google_sheets_reader.load_mentors_spreadsheet({
-            'google_spreadsheet_key' : self._google_spreadsheet_key,
-            'google_client_secret' : self._google_client_secret,
-            })
-        if not config_yaml:
+        elif self._box_user_id and self._box_file_id and self._box_jwt:
+            self.mentor_sheet_reader = BoxSheetReader()
+            self._additional_config_yaml = self.mentor_sheet_reader.load_mentors_spreadsheet({
+                'box_user_id' : self._box_user_id,
+                'box_file_id' : self._box_file_id,
+                'box_jwt' : self._box_jwt})
+
+        else:
+            print_err('ERROR: Incorrect mentor spreadsheet configuration, please check config.yaml')
             sys.exit()
 
         # Process additional config data from the mentors spreadsheet
         #
-        if not self._read_config_yaml(config_yaml):
+        if not self._read_additional_config_yaml(self._additional_config_yaml):
             sys.exit()
 
         # Start the browser, log in
@@ -124,8 +133,16 @@ class KittenScraper(object):
             self._password = config['password']
             self._dog_mode = config['dog_mode'] if 'dog_mode' in config else False
 
-            self._google_spreadsheet_key = config['google_spreadsheet_key']  if 'google_spreadsheet_key' in config else None
-            self._google_client_secret = config['google_client_secret']  if 'google_client_secret' in config else None
+            self._google_spreadsheet_key = config['google_spreadsheet_key'] if 'google_spreadsheet_key' in config else None
+            self._google_client_secret = config['google_client_secret'] if 'google_client_secret' in config else None
+
+            self._box_user_id = config['box_user_id'] if 'box_user_id' in config else None
+            self._box_file_id = config['box_file_id'] if 'box_file_id' in config else None
+            self._box_jwt = config['box_jwt'] if 'box_jwt' in config else None
+
+            if not (self._google_spreadsheet_key and self._google_client_secret) and not (self._box_user_id and self._box_file_id and self._box_jwt):
+                print_err('ERROR: Incomplete mentor spreadsheet configuration: {}'.format(config_file))
+                return False
 
         except yaml.YAMLError as err:
             print_err('ERROR: Unable to parse configuration file: {}, {}'.format(config_file, err))
@@ -141,12 +158,12 @@ class KittenScraper(object):
 
         return True
 
-    def _read_config_yaml(self, config_yaml):
+    def _read_additional_config_yaml(self, additional_config_yaml):
         ''' The mentors spreadsheet contains additional configuration data. This makes it easier to manage dynamic
             configuration data vs rollout of config.yaml updates.
         '''
         try:
-            config = yaml.load(config_yaml, Loader=yaml.SafeLoader)
+            config = yaml.load(additional_config_yaml, Loader=yaml.SafeLoader)
             self._login_url = config['login_url']
             self._search_url = config['search_url']
             self._animal_url = config['animal_url']
@@ -156,12 +173,20 @@ class KittenScraper(object):
             self._do_not_assign_mentor = config['do_not_assign_mentor'] if 'do_not_assign_mentor' in config else []
             self._mentors = config['mentors'] if 'mentors' in config else []
 
+        except AttributeError as err:
+            print_err('ERROR: Unable to read additional config: {}'.format(err))
+            return False
+
         except yaml.YAMLError as err:
-            print_err('ERROR: Unable to read config_yaml: {}'.format(err))
+            print_err('ERROR: Unable to read additional config: {}'.format(err))
+            return False
+
+        except TypeError as err:
+            print_err('ERROR: Invalid yaml in additional config: {}'.format(err))
             return False
 
         except KeyError as err:
-            print_err('ERROR: Missing value in config_yaml: {}'.format(err))
+            print_err('ERROR: Missing value in additional config: {}'.format(err))
             return False
 
         return True
@@ -344,7 +369,7 @@ class KittenScraper(object):
             notes += '{}*** {} is a mentor'.format('\r' if len(notes) else '', full_name)
 
         match_strings = emails.union([full_name])
-        matching_sheets = self.google_sheets_reader.find_matching_mentors(match_strings)
+        matching_sheets = self.mentor_sheet_reader.find_matching_mentors(match_strings)
         if matching_sheets:
             notes += '{}*** Found matching mentor(s): {}'.format('\r' if len(notes) else '', ', '.join([str(s) for s in matching_sheets]))
 
@@ -427,7 +452,7 @@ class KittenScraper(object):
         ''' Retrieve animals in foster for all current mentees
         '''
         with open(outfile, 'w') as f:
-            current_mentees = self.google_sheets_reader.get_current_mentees()
+            current_mentees = self.mentor_sheet_reader.get_current_mentees()
             for current in current_mentees:
                 self._print_and_write(f, '-------------------------------------------')
                 self._print_and_write(f, current['mentor'])
