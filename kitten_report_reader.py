@@ -6,7 +6,7 @@ from kitten_utils import *
 class KittenReportReader(object):
     ''' KittenReportReader will process the incoming daily report, query additional details, then output new results
     '''
-    def __init__(self, canine_mode):
+    def __init__(self, dog_mode):
         self.STATUS_DATE_COL = 0
         self.ANIMAL_TYPE_COL = 1
         self.ANIMAL_ID_COL = 2
@@ -14,9 +14,9 @@ class KittenReportReader(object):
         self.ANIMAL_AGE_COL = 4
         self.FOSTER_PARENT_ID_COL = 5
 
-        self.canine_mode = canine_mode
-        self.ADULT_ANIMAL_TYPE = 'cat' if not canine_mode else 'dog'
-        self.YOUNG_ANIMAL_TYPE = 'kitten' if not canine_mode else 'puppy'
+        self.dog_mode = dog_mode
+        self.ADULT_ANIMAL_TYPE = 'cat' if not dog_mode else 'dog'
+        self.YOUNG_ANIMAL_TYPE = 'kitten' if not dog_mode else 'puppy'
 
     def open_xls(self, xls_filename):
         ''' Open the daily report xls, perform some basic sanity checks

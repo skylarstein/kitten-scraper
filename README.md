@@ -1,6 +1,6 @@
 # A little bit of web scraping and automation for the Feline / Canine Foster Mentor Program
 
-![Platform macOS | Linux](https://img.shields.io/badge/Platform-macOS%20|%20Linux%20|%20Windows-brightgreen.svg)
+![Platform macOS | Linux | Windows](https://img.shields.io/badge/Platform-macOS%20|%20Linux%20|%20Windows-brightgreen.svg)
 ![Python | 3.6.x](https://img.shields.io/badge/Python-3.6.x-brightgreen.svg)
 ![Kitten Machine | Active](https://img.shields.io/badge/Kitten%20Machine-Active-brightgreen.svg)
 
@@ -48,14 +48,15 @@ Create a text file named 'config.yaml' in the kitten-scraper directory and enter
 ```yaml
 username : your_username
 password : your_password
-mentors_spreadsheet_key : key
+google_spreadsheet_key : key
+google_client_secret : client_secret.json
 ```
-Bonus configuration: canine mode! There are some slight differences when running Kitten Scraper with Canine Foster reports. To enable canine mode, add the following line to your config.yaml file:
+Bonus configuration: dog mode! There are some slight differences when running Kitten Scraper with Canine Foster reports. To enable canine mode, add the following line to your config.yaml file:
 ```yaml
-canine_mode : True
+dog_mode : True
 ```
 
-### client_secret.json
+### Google Sheets client_secret.json
 
 Google Sheets integration and Google Sheets API platform access will require a 'client_secret.json' file. [Instructions by pygsheets](https://pygsheets.readthedocs.io/en/stable/authorization.html) will assist you in creating this file. Copy 'client_secret.json' to the kitten-scraper directory.
 
@@ -79,7 +80,7 @@ optional arguments:
 
   -b, --show_browser    show the browser window (generally for debugging)
 
-  -c, --canine_mode     enable canine mode
+  -c, --dog_mode     enable dog mode
 ```
 
 ## Let's Do This

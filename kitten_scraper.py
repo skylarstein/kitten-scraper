@@ -28,7 +28,7 @@ class KittenScraper(object):
         arg_parser.add_argument('-o', '--output', help = 'specify an output file (csv)', required = False)
         arg_parser.add_argument('-s', '--status', help = 'save current mentee status to the given file (txt)', required = False)
         arg_parser.add_argument('-b', '--show_browser', help = 'show the browser window (generally for debugging)', required = False, action = 'store_true')
-        arg_parser.add_argument('-c', '--canine_mode', help = 'enable canine mode', required = False, action = 'store_true')
+        arg_parser.add_argument('-c', '--dog_mode', help = 'enable dog mode', required = False, action = 'store_true')
         args = arg_parser.parse_args()
 
         if not (args.input and args.output) and not args.status:
@@ -40,16 +40,20 @@ class KittenScraper(object):
         if not self._load_config_file():
             sys.exit()
 
-        if args.canine_mode:
-            self._canine_mode = True
+        if args.dog_mode:
+            self._dog_mode = True
 
-        if self._canine_mode:
+        if self._dog_mode:
             print_warn('** Canine Mode is Active **')
 
         # Load the Feline Foster Mentors spreadsheet
         #
         self.google_sheets_reader = GoogleSheetsReader()
-        config_yaml = self.google_sheets_reader.load_mentors_spreadsheet(sheets_key = self._mentors_spreadsheet_key)
+
+        config_yaml = self.google_sheets_reader.load_mentors_spreadsheet({
+            'google_spreadsheet_key' : self._google_spreadsheet_key,
+            'google_client_secret' : self._google_client_secret,
+            })
         if not config_yaml:
             sys.exit()
 
@@ -76,7 +80,7 @@ class KittenScraper(object):
             # Load the "daily report" xls
             #
             start_time = time.time()
-            kitten_report_reader = KittenReportReader(self._canine_mode)
+            kitten_report_reader = KittenReportReader(self._dog_mode)
             if not kitten_report_reader.open_xls(args.input):
                 sys.exit()
 
@@ -104,7 +108,7 @@ class KittenScraper(object):
             kitten_report_reader.output_results(persons_data, foster_parents, animal_details, filtered_animals, args.output)
 
             print('\n{0} foster report completed in {1:.0f} seconds. Written to {2}'.format(
-                'Feline' if not self._canine_mode else 'Canine',
+                'Feline' if not self._dog_mode else 'Canine',
                 time.time() - start_time,
                 args.output))
 
@@ -118,8 +122,10 @@ class KittenScraper(object):
             config = yaml.load(open(config_file, 'r'), Loader=yaml.SafeLoader)
             self._username = config['username']
             self._password = config['password']
-            self._mentors_spreadsheet_key = config['mentors_spreadsheet_key']
-            self._canine_mode = config['canine_mode'] if 'canine_mode' in config else False
+            self._dog_mode = config['dog_mode'] if 'dog_mode' in config else False
+
+            self._google_spreadsheet_key = config['google_spreadsheet_key']  if 'google_spreadsheet_key' in config else None
+            self._google_client_secret = config['google_client_secret']  if 'google_client_secret' in config else None
 
         except yaml.YAMLError as err:
             print_err('ERROR: Unable to parse configuration file: {}, {}'.format(config_file, err))
@@ -338,7 +344,7 @@ class KittenScraper(object):
             notes += '{}*** {} is a mentor'.format('\r' if len(notes) else '', full_name)
 
         match_strings = emails.union([full_name])
-        matching_sheets = self.google_sheets_reader.find_matches_in_feline_foster_spreadsheet(match_strings)
+        matching_sheets = self.google_sheets_reader.find_matching_mentors(match_strings)
         if matching_sheets:
             notes += '{}*** Found matching mentor(s): {}'.format('\r' if len(notes) else '', ', '.join([str(s) for s in matching_sheets]))
 
@@ -389,7 +395,7 @@ class KittenScraper(object):
                         animal_type = cols[5].text.lower()
                         animal_status = cols[2].text.lower()
                         if fostered_tr_active or agency_outgoing_tr_active:
-                            target_types = ['cat', 'kitten'] if not self._canine_mode else ['dog', 'puppy']
+                            target_types = ['cat', 'kitten'] if not self._dog_mode else ['dog', 'puppy']
                             if any(s in animal_type for s in target_types):
                                 if 'in foster' not in animal_status or animal_status == 'unassisted death - in foster':
                                     previous_feline_foster_count += 1

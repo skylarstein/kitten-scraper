@@ -1,17 +1,18 @@
 import pygsheets
 from kitten_utils import *
+from sheet_reader_base import SheetReaderBase
 
-class GoogleSheetsReader(object):
-    def load_mentors_spreadsheet(self, sheets_key):
+class GoogleSheetsReader(SheetReaderBase):
+    def load_mentors_spreadsheet(self, auth):
         ''' Load the feline foster spreadsheet
         '''
         self.mentor_sheets = []
         self.flattend_sheet_values = {}
 
         try:
-            print_success('Loading mentors spreadsheet {}...'.format(sheets_key))
-            client = pygsheets.authorize(outh_file='client_secret.json')
-            spreadsheet = client.open_by_key(sheets_key)
+            print_success('Loading mentors spreadsheet {}...'.format(auth['google_spreadsheet_key']))
+            client = pygsheets.authorize(auth['google_client_secret'])
+            spreadsheet = client.open_by_key(auth['google_spreadsheet_key'])
 
             config_yaml = spreadsheet.worksheet_by_title("Config")[1][0]
 
@@ -28,7 +29,7 @@ class GoogleSheetsReader(object):
         print('Loaded {} mentors from spreadsheet'.format(len(self.mentor_sheets)))
         return config_yaml
 
-    def find_matches_in_feline_foster_spreadsheet(self, match_strings):
+    def find_matching_mentors(self, match_strings):
         ''' Find mentor worksheets that match any string in match_strings. Not very sophisticated right now, I'm simply
             searching for a match anywhere in each mentor sheet.
         '''
