@@ -71,7 +71,7 @@ class GoogleSheetReader(SheetReaderBase):
                     mentees = []
                     break
 
-                elif cells[i][0].value.lower().strip() == 'completed mentees without kittens':
+                elif cells[i][0].value.lower().strip().find('completed mentees without') >= 0:
                     break # We've reach the end of "active mentee" rows
 
                 elif cells[i][name_col_id].value and cells[i][pid_col_id].value:
