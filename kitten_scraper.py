@@ -7,7 +7,7 @@ import yaml
 from argparse import ArgumentParser
 from datetime import datetime
 from box_sheet_reader import BoxSheetReader
-from google_sheets_reader import GoogleSheetReader
+from google_sheet_reader import GoogleSheetReader
 from kitten_report_reader import KittenReportReader
 from kitten_utils import *
 from selenium import webdriver
