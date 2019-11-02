@@ -54,6 +54,43 @@ class BoxSheetReader(SheetReaderBase):
         ''' Return the current mentees assigned to each mentor
         '''
         current_mentees = []
+        for worksheet in self._mentor_sheets:
+            if worksheet.name.lower() == 'retired mentor':
+                continue
+
+            print('Loading current mentees for {}... '.format(worksheet.name), end='')
+
+            # It's much faster to grab a whole block of cells at once vs iterating through many API calls
+            #
+            max_search_rows = min(50, worksheet.nrows)
+            cells = [worksheet.row_slice(row, start_colx=0, end_colx=7) for row in range(0, max_search_rows)]
+
+            name_col_id = self._find_column_by_name(cells, 'Name')
+            pid_col_id = self._find_column_by_name(cells, 'ID')
+
+            mentees = []
+            search_failed = False
+            for i in range(1, max_search_rows):
+                if i == max_search_rows - 1:
+                    search_failed = True
+                    print_err('Unable to determine current mentees for mentor {}'.format(worksheet.name))
+                    mentees = []
+                    break
+
+                elif str(cells[i][0].value).lower().find('completed mentees without') >= 0:
+                    break # We've reach the end of the "active mentee" rows
+
+                elif cells[i][name_col_id].value and cells[i][pid_col_id].value:
+                    mentee_name = cells[i][name_col_id].value
+                    pid = int(cells[i][pid_col_id].value)
+                    if not [mentee for mentee in mentees if mentee['pid'] == pid]: # ignore duplicate mentees
+                        mentees.append({'name' : mentee_name, 'pid' : pid})
+
+            if not search_failed:
+                print('found {}'.format(len(mentees)))
+
+            current_mentees.append({ 'mentor' : worksheet.name, 'mentees' : mentees})
+
         return current_mentees
 
     def _find_column_by_name(self, cells, name):
