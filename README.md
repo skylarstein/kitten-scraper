@@ -59,7 +59,9 @@ box_user_id : 'id'
 box_file_id : 'id'
 box_jwt : 'xxx_xxx_config.json'
 
-# Bonus configuration: Dog mode! There are some slight differences when running Kitten Scraper with Canine Foster reports. To enable "dog mode", add the following line, or optionally include -d or --dog_mode from the command line.
+# Bonus configuration: Dog mode! There are some slight differences when running Kitten Scraper
+# with Canine Foster reports. To enable "dog mode", add the following line, or optionally
+# include -d or --dog_mode from the command line.
 dog_mode : True
 ```
 
