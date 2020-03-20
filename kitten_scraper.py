@@ -28,6 +28,7 @@ class KittenScraper(object):
         arg_parser.add_argument('-i', '--input', help = 'specify the daily kitten report (xls)', required = False)
         arg_parser.add_argument('-o', '--output', help = 'specify an output file (csv)', required = False)
         arg_parser.add_argument('-s', '--status', help = 'save current mentee status to the given file (txt)', required = False)
+        arg_parser.add_argument('-c', '--config', help = 'specify a config file (optional, defaults to \'config.yaml\')', required = False, default='config.yaml')
         arg_parser.add_argument('-b', '--show_browser', help = 'show the browser window (generally for debugging)', required = False, action = 'store_true')
         arg_parser.add_argument('-d', '--dog_mode', help = 'enable dog mode', required = False, action = 'store_true')
         args = arg_parser.parse_args()
@@ -38,7 +39,7 @@ class KittenScraper(object):
 
         # Load config.yaml
         #
-        if not self._load_config_file():
+        if not self._load_config_file(args.config):
             sys.exit()
 
         if args.dog_mode:
@@ -123,11 +124,11 @@ class KittenScraper(object):
 
         self._exit_browser()
 
-    def _load_config_file(self):
+    def _load_config_file(self, config_file_yaml):
         ''' A config.yaml configuration file is expected to be in the same directory as this script
         '''
         try:
-            config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.yaml')
+            config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), config_file_yaml)
             config = yaml.load(open(config_file, 'r'), Loader=yaml.SafeLoader)
             self._username = config['username']
             self._password = config['password']

@@ -94,7 +94,7 @@ Box integration requires the creation of a new app via the Box Dev Console.
 
 ```text
 $ python3 kitten_scraper.py --help
-usage: kitten-scraper.py [-h] [-i INPUT] [-o OUTPUT] [--show_browser]
+usage: kitten_scraper.py [-h] [-i INPUT] [-o OUTPUT] [-s STATUS] [-c CONFIG] [-b] [-d]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -107,6 +107,9 @@ optional arguments:
 
   -s STATUS, --status STATUS
                         save current mentee status to the given file (txt)
+
+  -c CONFIG, --config CONFIG
+                        specify a config file (optional, defaults to 'config.yaml')
 
   -b, --show_browser    show the browser window (generally for debugging)
 
