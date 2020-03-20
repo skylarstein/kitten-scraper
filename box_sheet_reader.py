@@ -7,14 +7,12 @@ from sheet_reader_base import SheetReaderBase
 class BoxSheetReader(SheetReaderBase):
     def __init__(self):
         super().__init__()
-        self._mentor_sheets = []
-        self._flattend_sheet_values = {}
 
     def load_mentors_spreadsheet(self, auth):
         ''' Load the feline foster spreadsheet
         '''
         try:
-            print_success('Loading mentors spreadsheet from Box ({})...'.format(auth['box_file_id']))
+            print_success('Loading mentors spreadsheet from Box (id = {})...'.format(auth['box_file_id']))
 
             jwt_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), auth['box_jwt'])
             client = Client(JWTAuth.from_settings_file(jwt_path))
@@ -36,19 +34,6 @@ class BoxSheetReader(SheetReaderBase):
 
         print('Loaded {} mentors from \"{}\"'.format(len(self._mentor_sheets), box_file['name']))
         return config_yaml
-
-    def find_matching_mentors(self, match_strings):
-        ''' Find mentor worksheets that match any string in match_strings. Not very sophisticated right now, I'm simply
-            searching for a match anywhere in each mentor sheet.
-        '''
-        match_strings = [utf8(s).lower() for s in match_strings if s]
-        matching_mentors = set()
-
-        for sheet_name in self._flattend_sheet_values:
-            if len([item for item in self._flattend_sheet_values[sheet_name] if any(match in item for match in match_strings)]):
-                matching_mentors.add(sheet_name)
-
-        return matching_mentors
 
     def get_current_mentees(self):
         ''' Return the current mentees assigned to each mentor
@@ -92,9 +77,3 @@ class BoxSheetReader(SheetReaderBase):
             current_mentees.append({ 'mentor' : worksheet.name, 'mentees' : mentees})
 
         return current_mentees
-
-    def _find_column_by_name(self, cells, name):
-        for n in range(0, len(cells[0])):
-            if cells[0][n].value == name:
-                return n
-        return 0
