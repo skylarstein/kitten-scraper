@@ -29,7 +29,7 @@ class KittenScraper(object):
         arg_parser.add_argument('-o', '--output', help = 'specify an output file (csv)', required = False)
         arg_parser.add_argument('-s', '--status', help = 'save current mentee status to the given file (txt)', required = False)
         arg_parser.add_argument('-b', '--show_browser', help = 'show the browser window (generally for debugging)', required = False, action = 'store_true')
-        arg_parser.add_argument('-c', '--dog_mode', help = 'enable dog mode', required = False, action = 'store_true')
+        arg_parser.add_argument('-d', '--dog_mode', help = 'enable dog mode', required = False, action = 'store_true')
         args = arg_parser.parse_args()
 
         if not (args.input and args.output) and not args.status:
