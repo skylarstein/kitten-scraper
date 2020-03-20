@@ -149,8 +149,10 @@ class KittenReportReader(object):
 
             if len(filtered_animals):
                 outfile.write('\n\n\n*** Animals not in foster\n')
+                print_warn('\nAnimals not in foster')
                 for a in filtered_animals:
                     outfile.write('{} - {}\n'.format(a, animal_details[a]['status']))
+                    print('{} - {}'.format(a, animal_details[a]['status']))
 
     def _xlsfloat_as_datetime(self, xlsfloat, workbook_datemode):
         ''' Convert Excel float date type to datetime
