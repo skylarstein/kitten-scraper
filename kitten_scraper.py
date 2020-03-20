@@ -281,9 +281,10 @@ class KittenScraper(object):
                 #
                 special_msg = re.sub(r'(?i)This is a special message. If you would like to delete it then clear the Special Message box in the General Details section of this page.', '', special_msg).strip()
 
-                # Remove empty lines
+                # Remove empty lines and double quotes
                 #
                 special_msg = os.linesep.join([s for s in special_msg.splitlines() if s])
+                special_msg = special_msg.replace('"', '\'')
 
             animal_details[a] = {}
             animal_details[a]['message'] = special_msg
