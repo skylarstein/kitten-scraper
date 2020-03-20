@@ -291,6 +291,7 @@ class KittenScraper(object):
             status = self._get_selection_by_id('status')
             sub_status = self._get_selection_by_id('subStatus')
             animal_details[a]['status'] = '{}{}{}'.format(status, ' - ' if sub_status else '', sub_status)
+            animal_details[a]['name'] = self._get_attr_by_id('animalname').strip()
 
             try: 
                 animal_details[a]['status_date'] = datetime.strptime(self._get_attr_by_id('statusdate'), '%m/%d/%Y').strftime('%-d-%b-%Y')
