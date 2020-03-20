@@ -45,7 +45,7 @@ class KittenScraper(object):
             self._dog_mode = True
 
         if self._dog_mode:
-            print_warn('** Canine Mode is Active **')
+            print_warn('** Dog Mode is Active **')
 
         # Load the Feline Foster Mentors spreadsheet
         #
