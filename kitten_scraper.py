@@ -6,7 +6,8 @@ import time
 import yaml
 from argparse import ArgumentParser
 from datetime import datetime
-from google_sheets_reader import GoogleSheetsReader
+from box_sheet_reader import BoxSheetReader
+from google_sheet_reader import GoogleSheetReader
 from kitten_report_reader import KittenReportReader
 from kitten_utils import *
 from selenium import webdriver
@@ -27,8 +28,9 @@ class KittenScraper(object):
         arg_parser.add_argument('-i', '--input', help = 'specify the daily kitten report (xls)', required = False)
         arg_parser.add_argument('-o', '--output', help = 'specify an output file (csv)', required = False)
         arg_parser.add_argument('-s', '--status', help = 'save current mentee status to the given file (txt)', required = False)
+        arg_parser.add_argument('-c', '--config', help = 'specify a config file (optional, defaults to \'config.yaml\')', required = False, default='config.yaml')
         arg_parser.add_argument('-b', '--show_browser', help = 'show the browser window (generally for debugging)', required = False, action = 'store_true')
-        arg_parser.add_argument('-c', '--canine_mode', help = 'enable canine mode', required = False, action = 'store_true')
+        arg_parser.add_argument('-d', '--dog_mode', help = 'enable dog mode', required = False, action = 'store_true')
         args = arg_parser.parse_args()
 
         if not (args.input and args.output) and not args.status:
@@ -37,25 +39,37 @@ class KittenScraper(object):
 
         # Load config.yaml
         #
-        if not self._load_config_file():
+        if not self._load_config_file(args.config):
             sys.exit()
 
-        if args.canine_mode:
-            self._canine_mode = True
+        if args.dog_mode:
+            self._dog_mode = True
 
-        if self._canine_mode:
-            print_warn('** Canine Mode is Active **')
+        if self._dog_mode:
+            print_warn('** Dog Mode is Active **')
 
         # Load the Feline Foster Mentors spreadsheet
         #
-        self.google_sheets_reader = GoogleSheetsReader()
-        config_yaml = self.google_sheets_reader.load_mentors_spreadsheet(sheets_key = self._mentors_spreadsheet_key)
-        if not config_yaml:
+        if self._google_spreadsheet_key and self._google_client_secret:
+            self.mentor_sheet_reader = GoogleSheetReader()
+            self._additional_config_yaml = self.mentor_sheet_reader.load_mentors_spreadsheet({
+                'google_spreadsheet_key' : self._google_spreadsheet_key,
+                'google_client_secret' : self._google_client_secret})
+
+        elif self._box_user_id and self._box_file_id and self._box_jwt:
+            self.mentor_sheet_reader = BoxSheetReader()
+            self._additional_config_yaml = self.mentor_sheet_reader.load_mentors_spreadsheet({
+                'box_user_id' : self._box_user_id,
+                'box_file_id' : self._box_file_id,
+                'box_jwt' : self._box_jwt})
+
+        else:
+            print_err('ERROR: Incorrect mentor spreadsheet configuration, please check config.yaml')
             sys.exit()
 
         # Process additional config data from the mentors spreadsheet
         #
-        if not self._read_config_yaml(config_yaml):
+        if not self._read_additional_config_yaml(self._additional_config_yaml):
             sys.exit()
 
         # Start the browser, log in
@@ -76,7 +90,7 @@ class KittenScraper(object):
             # Load the "daily report" xls
             #
             start_time = time.time()
-            kitten_report_reader = KittenReportReader(self._canine_mode)
+            kitten_report_reader = KittenReportReader(self._dog_mode)
             if not kitten_report_reader.open_xls(args.input):
                 sys.exit()
 
@@ -104,22 +118,32 @@ class KittenScraper(object):
             kitten_report_reader.output_results(persons_data, foster_parents, animal_details, filtered_animals, args.output)
 
             print('\n{0} foster report completed in {1:.0f} seconds. Written to {2}'.format(
-                'Feline' if not self._canine_mode else 'Canine',
+                'Feline' if not self._dog_mode else 'Canine',
                 time.time() - start_time,
                 args.output))
 
         self._exit_browser()
 
-    def _load_config_file(self):
+    def _load_config_file(self, config_file_yaml):
         ''' A config.yaml configuration file is expected to be in the same directory as this script
         '''
         try:
-            config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.yaml')
+            config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), config_file_yaml)
             config = yaml.load(open(config_file, 'r'), Loader=yaml.SafeLoader)
             self._username = config['username']
             self._password = config['password']
-            self._mentors_spreadsheet_key = config['mentors_spreadsheet_key']
-            self._canine_mode = config['canine_mode'] if 'canine_mode' in config else False
+            self._dog_mode = config['dog_mode'] if 'dog_mode' in config else False
+
+            self._google_spreadsheet_key = config['google_spreadsheet_key'] if 'google_spreadsheet_key' in config else None
+            self._google_client_secret = config['google_client_secret'] if 'google_client_secret' in config else None
+
+            self._box_user_id = config['box_user_id'] if 'box_user_id' in config else None
+            self._box_file_id = config['box_file_id'] if 'box_file_id' in config else None
+            self._box_jwt = config['box_jwt'] if 'box_jwt' in config else None
+
+            if not (self._google_spreadsheet_key and self._google_client_secret) and not (self._box_user_id and self._box_file_id and self._box_jwt):
+                print_err('ERROR: Incomplete mentor spreadsheet configuration: {}'.format(config_file))
+                return False
 
         except yaml.YAMLError as err:
             print_err('ERROR: Unable to parse configuration file: {}, {}'.format(config_file, err))
@@ -135,12 +159,12 @@ class KittenScraper(object):
 
         return True
 
-    def _read_config_yaml(self, config_yaml):
+    def _read_additional_config_yaml(self, additional_config_yaml):
         ''' The mentors spreadsheet contains additional configuration data. This makes it easier to manage dynamic
             configuration data vs rollout of config.yaml updates.
         '''
         try:
-            config = yaml.load(config_yaml, Loader=yaml.SafeLoader)
+            config = yaml.load(additional_config_yaml, Loader=yaml.SafeLoader)
             self._login_url = config['login_url']
             self._search_url = config['search_url']
             self._animal_url = config['animal_url']
@@ -150,12 +174,20 @@ class KittenScraper(object):
             self._do_not_assign_mentor = config['do_not_assign_mentor'] if 'do_not_assign_mentor' in config else []
             self._mentors = config['mentors'] if 'mentors' in config else []
 
+        except AttributeError as err:
+            print_err('ERROR: Unable to read additional config: {}'.format(err))
+            return False
+
         except yaml.YAMLError as err:
-            print_err('ERROR: Unable to read config_yaml: {}'.format(err))
+            print_err('ERROR: Unable to read additional config: {}'.format(err))
+            return False
+
+        except TypeError as err:
+            print_err('ERROR: Invalid yaml in additional config: {}'.format(err))
             return False
 
         except KeyError as err:
-            print_err('ERROR: Missing value in config_yaml: {}'.format(err))
+            print_err('ERROR: Missing value in additional config: {}'.format(err))
             return False
 
         return True
@@ -250,15 +282,17 @@ class KittenScraper(object):
                 #
                 special_msg = re.sub(r'(?i)This is a special message. If you would like to delete it then clear the Special Message box in the General Details section of this page.', '', special_msg).strip()
 
-                # Remove empty lines
+                # Remove empty lines and double quotes
                 #
                 special_msg = os.linesep.join([s for s in special_msg.splitlines() if s])
+                special_msg = special_msg.replace('"', '\'')
 
             animal_details[a] = {}
             animal_details[a]['message'] = special_msg
             status = self._get_selection_by_id('status')
             sub_status = self._get_selection_by_id('subStatus')
             animal_details[a]['status'] = '{}{}{}'.format(status, ' - ' if sub_status else '', sub_status)
+            animal_details[a]['name'] = self._get_attr_by_id('animalname').strip()
 
             try: 
                 animal_details[a]['status_date'] = datetime.strptime(self._get_attr_by_id('statusdate'), '%m/%d/%Y').strftime('%-d-%b-%Y')
@@ -266,8 +300,10 @@ class KittenScraper(object):
                 animal_details[a]['status_date'] = 'Unknown'
 
             # If this animal is currently in foster, get the responsible person (foster parent)
+            # Dog mode: include all status other than 'adopted'
             #
-            if 'in foster' in status.lower() and 'unassisted death' not in status.lower():
+            status = status.lower()
+            if (self._dog_mode and 'adopted' not in status) or ('in foster' in status and 'unassisted death' not in status):
                 try:
                     p = int(self._get_attr_by_xpath('href', '//*[@id="Table17"]/tbody/tr[1]/td[2]/a').split('personid=')[1])
                     foster_parents.setdefault(p, []).append(a)
@@ -301,15 +337,15 @@ class KittenScraper(object):
         self._driver.find_element_by_id('userid').send_keys(str(person_number))
         self._driver.find_element_by_id('userid').send_keys(webdriver.common.keys.Keys.RETURN)
 
-        first_name     = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtFirstName')
-        last_name      = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtLastName')
-        preferred_name = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtPreferredName')
-        home_phone     = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_homePhone_txtPhone3')
-        cell_phone     = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_mobilePhone_txtPhone3')
-        email1         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[1]/td[1]')
-        email2         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[2]/td[1]')
-        email3         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[3]/td[1]')
-        email4         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[4]/td[1]')
+        first_name     = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtFirstName').strip()
+        last_name      = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtLastName').strip()
+        preferred_name = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonNameTitle1_txtPreferredName').strip()
+        home_phone     = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_homePhone_txtPhone3').strip()
+        cell_phone     = self._get_attr_by_id('ctl00_ctl00_ContentPlaceHolderBase_ContentPlaceHolder1_personDetailsUC_PersonContact1_mobilePhone_txtPhone3').strip()
+        email1         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[1]/td[1]').strip()
+        email2         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[2]/td[1]').strip()
+        email3         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[3]/td[1]').strip()
+        email4         = self._get_attr_by_xpath('innerText', '//*[@id="emailTable"]/tbody/tr[4]/td[1]').strip()
 
         emails = set()
         for email in (email for email in [email1, email2, email3, email4] if email): # add non-empties to set
@@ -338,7 +374,7 @@ class KittenScraper(object):
             notes += '{}*** {} is a mentor'.format('\r' if len(notes) else '', full_name)
 
         match_strings = emails.union([full_name])
-        matching_sheets = self.google_sheets_reader.find_matches_in_feline_foster_spreadsheet(match_strings)
+        matching_sheets = self.mentor_sheet_reader.find_matching_mentors(match_strings)
         if matching_sheets:
             notes += '{}*** Found matching mentor(s): {}'.format('\r' if len(notes) else '', ', '.join([str(s) for s in matching_sheets]))
 
@@ -389,7 +425,7 @@ class KittenScraper(object):
                         animal_type = cols[5].text.lower()
                         animal_status = cols[2].text.lower()
                         if fostered_tr_active or agency_outgoing_tr_active:
-                            target_types = ['cat', 'kitten'] if not self._canine_mode else ['dog', 'puppy']
+                            target_types = ['cat', 'kitten'] if not self._dog_mode else ['dog', 'puppy']
                             if any(s in animal_type for s in target_types):
                                 if 'in foster' not in animal_status or animal_status == 'unassisted death - in foster':
                                     previous_feline_foster_count += 1
@@ -421,7 +457,7 @@ class KittenScraper(object):
         ''' Retrieve animals in foster for all current mentees
         '''
         with open(outfile, 'w') as f:
-            current_mentees = self.google_sheets_reader.get_current_mentees()
+            current_mentees = self.mentor_sheet_reader.get_current_mentees()
             for current in current_mentees:
                 self._print_and_write(f, '-------------------------------------------')
                 self._print_and_write(f, current['mentor'])

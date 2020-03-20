@@ -1,5 +1,15 @@
 # 😺 [Kitten Scraper](https://github.com/skylarstein/kitten-scraper) Change Log
 
+## [2.1.0](https://github.com/skylarstein/kitten-scraper/compare/v2.0.8...v2.1.0) (2020-03-20)
+
+* Adds Box support for mentors spreadsheet
+* Renames "canine mode" to "dog mode" since I like the sounds of that better
+* Adds "dog mode" support for Mentee Status Report
+* Adds animal name to animal status strings
+* Adds optional -c/--config command line arg to specify a config file (defaults to 'config.yaml')
+* Updates dependencies
+* Various small details and improvements
+
 ## [2.0.8](https://github.com/skylarstein/kitten-scraper/compare/v2.0.7...v2.0.8) (2019-10-08)
 
 * Adds Windows support

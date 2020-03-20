@@ -6,7 +6,7 @@ from kitten_utils import *
 class KittenReportReader(object):
     ''' KittenReportReader will process the incoming daily report, query additional details, then output new results
     '''
-    def __init__(self, canine_mode):
+    def __init__(self, dog_mode):
         self.STATUS_DATE_COL = 0
         self.ANIMAL_TYPE_COL = 1
         self.ANIMAL_ID_COL = 2
@@ -14,9 +14,9 @@ class KittenReportReader(object):
         self.ANIMAL_AGE_COL = 4
         self.FOSTER_PARENT_ID_COL = 5
 
-        self.canine_mode = canine_mode
-        self.ADULT_ANIMAL_TYPE = 'cat' if not canine_mode else 'dog'
-        self.YOUNG_ANIMAL_TYPE = 'kitten' if not canine_mode else 'puppy'
+        self.dog_mode = dog_mode
+        self.ADULT_ANIMAL_TYPE = 'cat' if not dog_mode else 'dog'
+        self.YOUNG_ANIMAL_TYPE = 'kitten' if not dog_mode else 'puppy'
 
     def open_xls(self, xls_filename):
         ''' Open the daily report xls, perform some basic sanity checks
@@ -149,8 +149,10 @@ class KittenReportReader(object):
 
             if len(filtered_animals):
                 outfile.write('\n\n\n*** Animals not in foster\n')
+                print_warn('\nAnimals not in foster')
                 for a in filtered_animals:
                     outfile.write('{} - {}\n'.format(a, animal_details[a]['status']))
+                    print('{} - {}'.format(a, animal_details[a]['status']))
 
     def _xlsfloat_as_datetime(self, xlsfloat, workbook_datemode):
         ''' Convert Excel float date type to datetime
@@ -263,13 +265,18 @@ class KittenReportReader(object):
                 result_str += '\r'
             age, animal_type = self._pretty_print_animal_age(animal_ages[animal] if animal in animal_ages else '')
 
-            # Include spay/neuter status with each animal number
+            # Include additional animal info/status with each animal number
             #
             a_numbers_str = ''
             for a in animals_by_type[animal]:
                 sn_str = animal_details[a]['sn'] if a in animal_details else 'Unknown'
                 status_str = animal_details[a]['status'] if a in animal_details else 'Status: Unknown'
-                a_numbers_str += '{}{} (S/N: {}, {})'.format('\r' if a_numbers_str else '', a, sn_str, status_str)
+                name_str = animal_details[a]['name'] if a in animal_details else ''
+                animal_info_str = '{}{} (S/N: {}, {}'.format('\r' if a_numbers_str else '', a, sn_str, status_str)
+                if name_str:
+                    animal_info_str += ', Name: {}'.format(name_str)
+                animal_info_str += ')'
+                a_numbers_str += animal_info_str
             result_str += '{} {}{} @ {}\r{}'.format(animal_counts[animal], animal_type.lower(), 's' if animal_counts[animal] > 1 else '', age, a_numbers_str)
 
         return result_str, animal_numbers

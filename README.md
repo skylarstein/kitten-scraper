@@ -1,6 +1,6 @@
 # A little bit of web scraping and automation for the Feline / Canine Foster Mentor Program
 
-![Platform macOS | Linux](https://img.shields.io/badge/Platform-macOS%20|%20Linux%20|%20Windows-brightgreen.svg)
+![Platform macOS | Linux | Windows](https://img.shields.io/badge/Platform-macOS%20|%20Linux%20|%20Windows-brightgreen.svg)
 ![Python | 3.6.x](https://img.shields.io/badge/Python-3.6.x-brightgreen.svg)
 ![Kitten Machine | Active](https://img.shields.io/badge/Kitten%20Machine-Active-brightgreen.svg)
 
@@ -46,24 +46,55 @@ $ pip3 install -r requirements.txt
 Create a text file named 'config.yaml' in the kitten-scraper directory and enter your credentials and configuration in this format:
 
 ```yaml
-username : your_username
-password : your_password
-mentors_spreadsheet_key : key
-```
-Bonus configuration: canine mode! There are some slight differences when running Kitten Scraper with Canine Foster reports. To enable canine mode, add the following line to your config.yaml file:
-```yaml
-canine_mode : True
+# Required
+username : 'your_username'
+password : 'your_password'
+
+# Optional. Include only if the mentor spreadsheet lives on Google Sheets.
+google_spreadsheet_key : 'key'
+google_client_secret : 'client_secret.json'
+
+# Optional. Include only if the mentor spreadsheet lives on Box.
+box_user_id : 'id'
+box_file_id : 'id'
+box_jwt : 'xxx_xxx_config.json'
+
+# Bonus configuration: Dog mode! There are some slight differences when running Kitten Scraper
+# with Canine Foster reports. To enable "dog mode", add the following line, or optionally
+# include -d or --dog_mode from the command line.
+dog_mode : True
 ```
 
-### client_secret.json
+## Google Sheets Integration
 
-Google Sheets integration and Google Sheets API platform access will require a 'client_secret.json' file. [Instructions by pygsheets](https://pygsheets.readthedocs.io/en/stable/authorization.html) will assist you in creating this file. Copy 'client_secret.json' to the kitten-scraper directory.
+Google Sheets integration and Google Sheets API platform access will require a ```client_secret.json``` file. [Instructions by pygsheets](https://pygsheets.readthedocs.io/en/stable/authorization.html) will assist you in creating this file. Copy ```client_secret.json``` to the kitten-scraper directory.
+
+The ```google_spreadsheet_key``` value for config.yaml value can be found in the URL of the mentor spreadsheet.
+
+## Box Sheets Integration
+
+Box integration requires the creation of a new app via the Box Dev Console.
+
+1. Assure you have 2-step verification enabled for your Box account. [Log in to your account](https://app.box.com/account), scroll down to Authentication, and enable if necessary.
+
+2. Visit the [Dev Console](https://app.box.com/developers/console) and create a new *Enterprise Integration* app. Select "*OAuth 2.0 with JWT (Server Authentication)*", enter any name you like (e.g. Kitten-Scraper or Puppy-Scraper), *Create App*, then *View Your App*.
+
+3. Visit your App's configuration screen
+    * From *Application Access*, select *Enterprise*
+    * From *Advanced Features*, select *Perform Actions as Users*
+    * From *Add and Manage Public Keys*, click *Generate a Public/Private Keypair*. This will download an ```xxx_xxx_config.json``` file. Copy this to your kitten-scraper directory.
+
+4. Vist your App's *General* screen. From the *App Authorization* section, click *Submit for Authorization*. This will generate an email with an API Key. Follow the instructions in the email.
+
+5. The ```box_user_id``` for config.yaml can be found in on your *Account Settings* page, as *Account ID*.
+
+6. The ```box_file_id``` for config.yaml value can be found in the URL of the mentor spreadsheet.
 
 ## Command Line Arguments
 
 ```text
 $ python3 kitten_scraper.py --help
-usage: kitten-scraper.py [-h] [-i INPUT] [-o OUTPUT] [--show_browser]
+usage: kitten_scraper.py [-h] [-i INPUT] [-o OUTPUT] [-s STATUS] [-c CONFIG] [-b] [-d]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -77,9 +108,12 @@ optional arguments:
   -s STATUS, --status STATUS
                         save current mentee status to the given file (txt)
 
+  -c CONFIG, --config CONFIG
+                        specify a config file (optional, defaults to 'config.yaml')
+
   -b, --show_browser    show the browser window (generally for debugging)
 
-  -c, --canine_mode     enable canine mode
+  -d, --dog_mode        enable dog mode
 ```
 
 ## Let's Do This

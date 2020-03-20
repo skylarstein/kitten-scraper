@@ -1,64 +1,53 @@
 import pygsheets
 from kitten_utils import *
+from sheet_reader_base import SheetReaderBase
 
-class GoogleSheetsReader(object):
-    def load_mentors_spreadsheet(self, sheets_key):
+class GoogleSheetReader(SheetReaderBase):
+    def __init__(self):
+        super().__init__()
+
+    def load_mentors_spreadsheet(self, auth):
         ''' Load the feline foster spreadsheet
         '''
-        self.mentor_sheets = []
-        self.flattend_sheet_values = {}
-
         try:
-            print_success('Loading mentors spreadsheet {}...'.format(sheets_key))
-            client = pygsheets.authorize(outh_file='client_secret.json')
-            spreadsheet = client.open_by_key(sheets_key)
+            print_success('Loading mentors spreadsheet from Google Sheets (id = {})...'.format(auth['google_spreadsheet_key']))
 
-            config_yaml = spreadsheet.worksheet_by_title("Config")[1][0]
+            client = pygsheets.authorize(auth['google_client_secret'])
+            spreadsheet = client.open_by_key(auth['google_spreadsheet_key'])
+
+            config_yaml = spreadsheet.worksheet_by_title(self._config_sheet_name)[2][1]
 
             for worksheet in spreadsheet.worksheets():
-                if worksheet.title.lower() not in ['contact info', 'config', 'updates', 'announcements', 'resources', 'calendar']:
-                    self.mentor_sheets.append(worksheet)
+                if not self._is_reserved_sheet(worksheet.title):
+                    self._mentor_sheets.append(worksheet)
                     all_values = worksheet.get_all_values(include_tailing_empty = False, include_tailing_empty_rows = False)
-                    self.flattend_sheet_values[utf8(worksheet.title)] = [utf8(item).lower() for sublist in all_values for item in sublist]
+                    self._flattend_sheet_values[utf8(worksheet.title)] = [utf8(item).lower() for sublist in all_values for item in sublist]
 
         except Exception as e:
             print_err('ERROR: Unable to load Feline Foster spreadsheet!\r\n{}, {}'.format(str(e), repr(e)))
             return None
 
-        print('Loaded {} mentors from spreadsheet'.format(len(self.mentor_sheets)))
+        print('Loaded {} mentors from \"{}\"'.format(len(self._mentor_sheets), spreadsheet.title))
         return config_yaml
-
-    def find_matches_in_feline_foster_spreadsheet(self, match_strings):
-        ''' Find mentor worksheets that match any string in match_strings. Not very sophisticated right now, I'm simply
-            searching for a match anywhere in each mentor sheet.
-        '''
-        match_strings = [utf8(s).lower() for s in match_strings if s]
-        matching_mentors = set()
-
-        for sheet_name in self.flattend_sheet_values:
-            if len([item for item in self.flattend_sheet_values[sheet_name] if any(match in item for match in match_strings)]):
-                matching_mentors.add(sheet_name)
-
-        return matching_mentors
 
     def get_current_mentees(self):
         ''' Return the current mentees assigned to each mentor
         '''
         current_mentees = []
-        for worksheet in self.mentor_sheets:
+        for worksheet in self._mentor_sheets:
             if worksheet.title.lower() == 'retired mentor':
                 continue
             print('Loading current mentees for {}... '.format(worksheet.title), end='')
-            mentees = []
 
             # It's much faster to grab a whole block of cells at once vs iterating through many API calls
             #
-            max_search_rows = 50
+            max_search_rows = min(50, worksheet.rows)
             cells = worksheet.range('A1:G{}'.format(max_search_rows), returnas='cells')
 
             name_col_id = self._find_column_by_name(cells, 'Name')
             pid_col_id = self._find_column_by_name(cells, 'ID')
 
+            mentees = []
             search_failed = False
             for i in range(1, max_search_rows):
                 if i == max_search_rows - 1:
@@ -67,8 +56,8 @@ class GoogleSheetsReader(object):
                     mentees = []
                     break
 
-                elif cells[i][0].value.lower().strip() == 'completed mentees without kittens':
-                    break # We've reach the end of "active mentee" rows
+                elif str(cells[i][0].value).lower().find('completed mentees without') >= 0:
+                    break # We've reach the end of the "active mentee" rows
 
                 elif cells[i][name_col_id].value and cells[i][pid_col_id].value:
                     mentee_name = cells[i][name_col_id].value
@@ -82,9 +71,3 @@ class GoogleSheetsReader(object):
             current_mentees.append({ 'mentor' : worksheet.title, 'mentees' : mentees})
 
         return current_mentees
-
-    def _find_column_by_name(self, cells, name):
-        for n in range(0, len(cells[0])):
-            if cells[0][n].value == name:
-                return n
-        return 0
