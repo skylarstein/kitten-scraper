@@ -6,8 +6,9 @@
 * Renames "canine mode" to "dog mode" since I like the sounds of that better
 * Adds "dog mode" support for Mentee Status Report
 * Adds animal name to animal status strings
-* Various small details and improvements
+* Adds optional -c/--config command line arg to specify a config file (defaults to 'config.yaml')
 * Updates dependencies
+* Various small details and improvements
 
 ## [2.0.8](https://github.com/skylarstein/kitten-scraper/compare/v2.0.7...v2.0.8) (2019-10-08)
 
