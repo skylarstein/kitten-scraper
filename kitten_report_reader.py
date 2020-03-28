@@ -117,7 +117,7 @@ class KittenReportReader(object):
             for e in person_data['emails']:
                 email += '{}{}'.format('\r' if email else '', e)
 
-            # Since we're processing a "daily report" I can assume all kittens in this group went into foster on the
+            # Since we're processing a "daily report" I can assume all animals in this group went into foster on the
             # same date
             #
             date_received = animal_details[animal_numbers[0]]['status_date']
@@ -239,7 +239,7 @@ class KittenReportReader(object):
                 a_type = utf8(a_type)
                 last_animal_type = a_type
 
-            if person_number == p_number:
+            if person_number == p_number and a_number not in animal_numbers:
                 animal_types.append(a_type)
                 animal_numbers.append(a_number)
 
