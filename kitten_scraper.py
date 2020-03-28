@@ -5,7 +5,7 @@ import sys
 import time
 import yaml
 from argparse import ArgumentParser
-from datetime import datetime
+from datetime import date, datetime
 from box_sheet_reader import BoxSheetReader
 from google_sheet_reader import GoogleSheetReader
 from kitten_report_reader import KittenReportReader
@@ -33,7 +33,7 @@ class KittenScraper(object):
         arg_parser.add_argument('-d', '--dog_mode', help = 'enable dog mode', required = False, action = 'store_true')
         args = arg_parser.parse_args()
 
-        if not (args.input and args.output) and not args.status:
+        if not args.input and not args.status:
             arg_parser.print_help()
             sys.exit(0)
 
@@ -48,7 +48,13 @@ class KittenScraper(object):
         if self._dog_mode:
             print_warn('** Dog Mode is Active **')
 
-        # Load the Feline Foster Mentors spreadsheet
+        if args.input and not args.output:
+            # Output file not specified. Build default file name.
+            #
+            args.output = os.path.join(os.path.dirname(args.input), '{}_foster_mentor_report_{}.csv'.format(
+                'canine' if self._dog_mode else 'feline', date.today().strftime("%Y.%m.%d")))
+
+        # Load the Foster Mentors spreadsheet
         #
         if self._google_spreadsheet_key and self._google_client_secret:
             self.mentor_sheet_reader = GoogleSheetReader()
