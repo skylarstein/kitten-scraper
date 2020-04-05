@@ -62,7 +62,7 @@ class KittenReportReader(object):
 
         return animal_numbers
 
-    def output_results(self, persons_data, foster_parents, animal_details, filtered_animals, csv_filename):
+    def output_results(self, persons_data, foster_parents, animal_details, filtered_animals, csv_filename, dog_mode):
         ''' Output the results to a new csv document
         '''
         print_success('Writing results to {}...'.format(csv_filename))
@@ -76,7 +76,7 @@ class KittenReportReader(object):
         csv_rows[-1].append('Phone')
         csv_rows[-1].append('Person ID')
         csv_rows[-1].append('Foster Experience')
-        csv_rows[-1].append('Date Kittens Received')
+        csv_rows[-1].append('Date {} Received'.format('Kittens' if not dog_mode else 'Canines'))
         csv_rows[-1].append('Quantity')
         csv_rows[-1].append('Special Animal Message')
 

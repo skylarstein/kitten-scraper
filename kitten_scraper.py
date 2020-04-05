@@ -121,7 +121,12 @@ class KittenScraper(object):
             # Output the combined results to csv
             #
             self._make_dir(args.output)
-            kitten_report_reader.output_results(persons_data, foster_parents, animal_details, filtered_animals, args.output)
+            kitten_report_reader.output_results(persons_data,
+                                                foster_parents,
+                                                animal_details,
+                                                filtered_animals,
+                                                args.output,
+                                                self._dog_mode)
 
             print('\n{0} foster report completed in {1:.0f} seconds. Written to {2}'.format(
                 'Feline' if not self._dog_mode else 'Canine',
