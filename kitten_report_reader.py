@@ -77,7 +77,7 @@ class KittenReportReader(object):
         csv_rows[-1].append('Person ID')
         csv_rows[-1].append('Foster Experience')
         csv_rows[-1].append('Date {} Received'.format('Kittens' if not dog_mode else 'Canines'))
-        csv_rows[-1].append('Quantity')
+        csv_rows[-1].append('Details')
         csv_rows[-1].append('Special Animal Message')
 
         for person_number in sorted(foster_parents, key=lambda p: persons_data[p]['notes']):
@@ -87,8 +87,9 @@ class KittenReportReader(object):
             report_notes = person_data['notes']
             loss_rate = round(person_data['loss_rate'])
 
-            animal_quantity_string, animal_numbers = self._count_animals(person_number, foster_parents, animal_details)
-
+            animal_details_string, animal_numbers = self._collect_animals(person_number,
+                                                                          foster_parents,
+                                                                          animal_details)
             special_message = ''
             for a in animal_numbers:
                 msg = animal_details[a]['message']
@@ -133,7 +134,7 @@ class KittenReportReader(object):
             csv_rows[-1].append('="{}"'.format(person_number))
             csv_rows[-1].append('"{}"'.format(foster_experience))
             csv_rows[-1].append('="{}"'.format(date_received))
-            csv_rows[-1].append('"{}"'.format(animal_quantity_string))
+            csv_rows[-1].append('"{}"'.format(animal_details_string))
             csv_rows[-1].append('"{}"'.format(special_message))
 
             print('{} (Experience: {}, Loss Rate: {}%) {}{}{}'.format(name, foster_experience, loss_rate, ConsoleFormat.GREEN, report_notes.replace('\r', ', '), ConsoleFormat.END))
@@ -216,8 +217,8 @@ class KittenReportReader(object):
 
         return pretty_age_string, animal_type
 
-    def _count_animals(self, person_number, foster_parents, animal_details):
-        ''' Count the number and age of each animal type assigned to this person
+    def _collect_animals(self, person_number, foster_parents, animal_details):
+        ''' Collect/format additional details for each animal assigned to person_number
         '''
         animal_types = []
         animals_by_type = {}
@@ -251,32 +252,39 @@ class KittenReportReader(object):
 
                 animals_by_type.setdefault(a_type, []).append(a_number)
 
-        # We now have a list of all animal types. Next, create a set with total count per type.
-        #
-        animal_counts = {}
+        animal_counts_by_type = {}
         for animal in set(animal_types):
-            animal_counts[animal] = animal_types.count(animal)
+            animal_counts_by_type[animal] = animal_types.count(animal)
 
         # Pretty-print results
         #
-        result_str = ''
-        for animal in animal_counts:
-            if result_str:
-                result_str += '\r'
-            age, animal_type = self._pretty_print_animal_age(animal_ages[animal] if animal in animal_ages else '')
+        details_str = ''
+        for animal_type in animal_counts_by_type:
+            _age, _type = self._pretty_print_animal_age(animal_ages[animal_type] if animal_type in animal_ages else '')
 
-            # Include additional animal info/status with each animal number
-            #
-            a_numbers_str = ''
-            for a in animals_by_type[animal]:
-                sn_str = animal_details[a]['sn'] if a in animal_details else 'Unknown'
-                status_str = animal_details[a]['status'] if a in animal_details else 'Status: Unknown'
-                name_str = animal_details[a]['name'] if a in animal_details else ''
-                animal_info_str = '{}{} (S/N: {}, {}'.format('\r' if a_numbers_str else '', a, sn_str, status_str)
-                if name_str:
-                    animal_info_str += ', Name: {}'.format(name_str)
-                animal_info_str += ')'
-                a_numbers_str += animal_info_str
-            result_str += '{} {}{} @ {}\r{}'.format(animal_counts[animal], animal_type.lower(), 's' if animal_counts[animal] > 1 else '', age, a_numbers_str)
+            _details = ''
+            for a in animals_by_type[animal_type]:
+                _sn = animal_details[a]['sn'] if a in animal_details else 'Unknown'
+                _status = animal_details[a]['status'] if a in animal_details else 'Status: Unknown'
+                _name = animal_details[a]['name'] if a in animal_details else 'No Name'
+                _breed = animal_details[a]['breed'] if a in animal_details else 'Unknown Breed'
+                _color = animal_details[a]['primary_color'] if a in animal_details else 'Unknown Color'
+                _secondary_color = animal_details[a]['secondary_color'] if a in animal_details else None
+                if _secondary_color not in [None, 'None']:
+                    _color += '/{}'.format(_secondary_color)
 
-        return result_str, animal_numbers
+                _details += '{}{} {}, S/N {}, {}, {}, {}'.format('\r' if _details else '',
+                                                          a,
+                                                          _status,
+                                                          _sn,
+                                                          _name,
+                                                          _breed,
+                                                          _color)
+
+            details_str += '{}{} {}{} @ {}\r{}'.format('\r' if details_str else '',
+                                                        animal_counts_by_type[animal_type],
+                                                        _type.lower(),
+                                                        's' if animal_counts_by_type[animal_type] > 1 else '',
+                                                        _age,
+                                                        _details)
+        return details_str, animal_numbers
