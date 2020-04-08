@@ -264,14 +264,36 @@ class KittenReportReader(object):
 
             _details = ''
             for a in animals_by_type[animal_type]:
-                _sn = animal_details[a]['sn'] if a in animal_details else 'Unknown'
-                _status = animal_details[a]['status'] if a in animal_details else 'Status: Unknown'
-                _name = animal_details[a]['name'] if a in animal_details else 'No Name'
-                _breed = animal_details[a]['breed'] if a in animal_details else 'Unknown Breed'
-                _color = animal_details[a]['primary_color'] if a in animal_details else 'Unknown Color'
-                _secondary_color = animal_details[a]['secondary_color'] if a in animal_details else None
-                if _secondary_color not in [None, 'None']:
+                _sn              = animal_details[a].get('sn')
+                _status          = animal_details[a].get('status')
+                _name            = animal_details[a].get('name')
+                _breed           = animal_details[a].get('breed')
+                _color           = animal_details[a].get('primary_color')
+                _secondary_color = animal_details[a].get('secondary_color')
+
+                # Create some helpful default strings
+                #
+                set_default = lambda str, default : default if str.strip() in [None, ''] else str
+
+                _sn     = set_default(_sn, 'Unknown')
+                _status = set_default(_status, 'Status: Unknown')
+                _name   = set_default(_name, 'Unnamed')
+                _breed  = set_default(_breed, 'Unknown Breed')
+                _color  = set_default(_color, 'Unknown Color')
+
+                if _secondary_color.strip() not in [None, '', 'None']:
                     _color += '/{}'.format(_secondary_color)
+
+                # Abbreviate some long 'breed' strings.
+                #
+                abbreviations = {
+                    'domesticshorthair'  : 'DSH',
+                    'domesticmediumhair' : 'DMH',
+                    'domesticlonghair'   : 'DLH' }
+
+                abbreviation = abbreviations.get(_breed.replace(' ', '').lower())
+                if abbreviation:
+                    _breed = abbreviation
 
                 _details += '{}{} {}, S/N {}, {}, {}, {}'.format('\r' if _details else '',
                                                           a,
