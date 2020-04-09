@@ -596,9 +596,9 @@ class KittenScraper(object):
         csv_rows[-1].append('Person ID')
         csv_rows[-1].append('Foster Experience')
         csv_rows[-1].append('Date {}s Received'.format(self.BASE_ANIMAL_TYPE.capitalize()))
-        csv_rows[-1].append('Details')
         if self._dog_mode:
             csv_rows[-1].append('Details (Brief)')
+        csv_rows[-1].append('Details')
         csv_rows[-1].append('Special Animal Message')
 
         # Build a row for each foster parent
@@ -648,9 +648,9 @@ class KittenScraper(object):
             csv_rows[-1].append('="{}"'.format(person_number))
             csv_rows[-1].append('"{}"'.format(foster_experience))
             csv_rows[-1].append('="{}"'.format(date_received))
-            csv_rows[-1].append('"{}"'.format(animal_details))
             if self._dog_mode:
                 csv_rows[-1].append('"{}"'.format(animal_details_brief))
+            csv_rows[-1].append('"{}"'.format(animal_details))
             csv_rows[-1].append('"{}"'.format(special_message))
 
             print('{} (Experience: {}, Loss Rate: {}%) {}{}{}'.format(name, foster_experience, loss_rate, ConsoleFormat.GREEN, report_notes.replace('\r', ', '), ConsoleFormat.END))
