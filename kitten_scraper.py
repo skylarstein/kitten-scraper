@@ -686,7 +686,7 @@ class KittenScraper(object):
                                          animal_type, 
                                          's' if len(animals) > 1 else '',
                                          animal_data[animals[0]]['age'])
-            for a in animals:
+            for a in sorted(animals):
                 line += '\r{} ({}), S/N {}, {}, {}, {}'.format(a,
                                                                animal_data[a]['gender_short'],
                                                                animal_data[a]['sn'],
