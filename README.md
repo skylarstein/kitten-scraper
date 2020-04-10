@@ -100,7 +100,7 @@ optional arguments:
   -h, --help            show this help message and exit
 
   -i INPUT, --input INPUT
-                        specify the daily kitten report (xls)
+                        specify the daily kitten report (xls), or optionally a comma-separated list of animal numbers
 
   -o OUTPUT, --output OUTPUT
                         specify an output file (csv)

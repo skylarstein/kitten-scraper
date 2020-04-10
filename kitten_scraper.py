@@ -26,7 +26,7 @@ class KittenScraper(object):
         print('Welcome to KittenScraper {}'.format(__version__))
 
         arg_parser = ArgumentParser()
-        arg_parser.add_argument('-i', '--input', help = 'specify the daily kitten report (xls)', required = False)
+        arg_parser.add_argument('-i', '--input', help = 'specify the daily kitten report (xls), or optionally a comma-separated list of animal numbers', required = False)
         arg_parser.add_argument('-o', '--output', help = 'specify an output file (csv)', required = False)
         arg_parser.add_argument('-s', '--status', help = 'save current mentee status to the given file (txt)', required = False)
         arg_parser.add_argument('-c', '--config', help = 'specify a config file (optional, defaults to \'config.yaml\')', required = False, default='config.yaml')
@@ -99,14 +99,23 @@ class KittenScraper(object):
             print('Status completed in {0:.0f} seconds. Written to {1}\n'.format(time.time() - start_time, args.status))
 
         if args.input:
-            # Load animal numbers from the "daily report" xls
+            # Load animal numbers. Note that args.input will either be a path to the "daily report" xls, or may
+            # optionally be a comma-separated list of animal numbers.
             #
             start_time = time.time()
-            animal_numbers = KittenReportReader().read_animal_numbers_from_xls(args.input)
+
+            if re.fullmatch(r'(\s?\d+\s?)(\s?,\s?\d+\s?)*$', args.input):
+                animal_numbers = [s.strip() for s in args.input.split(',')]
+            else:
+                animal_numbers = KittenReportReader().read_animal_numbers_from_xls(args.input)
+    
             if not animal_numbers:
                 sys.exit()
 
-            print('Found {} animal: {}'.format(len(animal_numbers), ', '.join([str(a) for a in animal_numbers])))
+            print('Found {} animal{}: {}'.format(
+                len(animal_numbers),
+                's' if len(animal_numbers) != 1 else '',
+                ', '.join([str(a) for a in animal_numbers])))
 
             # Query details for each animal (current foster parent, foster status, etc)
             #
@@ -597,8 +606,8 @@ class KittenScraper(object):
         csv_rows[-1].append('Foster Experience')
         csv_rows[-1].append('Date {}s Received'.format(self.BASE_ANIMAL_TYPE.capitalize()))
         if self._dog_mode:
-            csv_rows[-1].append('Details (Brief)')
-        csv_rows[-1].append('Details')
+            csv_rows[-1].append('Animal Details (Brief)')
+        csv_rows[-1].append('Animal Details')
         csv_rows[-1].append('Special Animal Message')
 
         # Build a row for each foster parent
@@ -653,8 +662,12 @@ class KittenScraper(object):
             csv_rows[-1].append('"{}"'.format(animal_details))
             csv_rows[-1].append('"{}"'.format(special_message))
 
-            print('{} (Experience: {}, Loss Rate: {}%) {}{}{}'.format(name, foster_experience, loss_rate, ConsoleFormat.GREEN, report_notes.replace('\r', ', '), ConsoleFormat.END))
-
+            print('{} (Experience: {}, Loss Rate: {}%) {}{}{}'.format(name,
+                                                                      foster_experience, 
+                                                                      loss_rate,
+                                                                      ConsoleFormat.GREEN,
+                                                                      report_notes.replace('\r', ', '),
+                                                                      ConsoleFormat.END))
         with open(csv_filename, 'w') as outfile:
             for row in csv_rows:
                 outfile.write(','.join(row))
