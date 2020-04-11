@@ -53,12 +53,6 @@ class KittenScraper(object):
         self.ADULT_ANIMAL_TYPE = 'cat' if not self._dog_mode else 'dog'
         self.BASE_ANIMAL_TYPE = 'feline' if not self._dog_mode else 'canine'
 
-        if args.input and not args.output:
-            # Build a default output file name if one was not specified
-            #
-            args.output = os.path.join(os.path.dirname(args.input),
-                '{}_foster_mentor_report_{}.csv'.format(self.BASE_ANIMAL_TYPE, date.today().strftime('%Y.%m.%d')))
-
         # Load the Foster Mentors spreadsheet
         #
         if self._google_spreadsheet_key and self._google_client_secret:
@@ -130,8 +124,12 @@ class KittenScraper(object):
             for person in foster_parents:
                 persons_data[person] = self._get_person_data(person)
 
-            # Save results to file
+            # Save results to file. If args.out is empty, build a default path and file name
             #
+            if not args.output:
+                args.output = os.path.join(default_dir(),
+                    '{}_foster_mentor_report_{}.csv'.format(self.BASE_ANIMAL_TYPE, date.today().strftime('%Y.%m.%d')))
+
             self._make_dir(args.output)
             self._output_results(animal_data,
                                  foster_parents,

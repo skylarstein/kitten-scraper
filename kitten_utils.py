@@ -1,3 +1,4 @@
+import os
 import sys
 
 class ConsoleFormat(object):
@@ -22,3 +23,17 @@ def print_err(msg):
 
 def utf8(strval):
     return strval.encode('utf-8').decode().strip() if sys.version_info.major >= 3 else strval.encode('utf-8').strip()
+
+def default_dir():
+    # Disclaimer: I'm not trying to be wildly portable here!
+    #
+    if sys.platform == 'darwin' or sys.platform.startswith('linux'):
+        return os.path.expanduser('~/Desktop')
+    elif sys.platform.startswith('win32'):
+        desktop_onedrive = os.path.join(os.environ['USERPROFILE'], 'OneDrive')
+        if os.path.exists(desktop_onedrive):
+            return desktop_onedrive
+        else:
+            return os.path.join(os.environ['USERPROFILE'], 'Desktop')
+    else:
+        return os.path.dirname(os.path.realpath(__file__))
