@@ -111,14 +111,14 @@ class KittenScraper(object):
                 's' if len(animal_numbers) != 1 else '',
                 ', '.join([str(a) for a in animal_numbers])))
 
-            # Query details for each animal (current foster parent, foster status, etc)
+            # Query details for each animal (current foster parent, foster status, breed, color, gender, age, etc.)
             #
             animal_data, foster_parents, animals_not_in_foster = self._get_animal_data(animal_numbers)
 
             for p in foster_parents:
                 print('Animals for foster parent {} = {}'.format(p, foster_parents[p]))
 
-            # Query details for each foster parent (name, contact details, etc)
+            # Query details for each foster parent (name, contact details, etc.)
             #
             persons_data = {}
             for person in foster_parents:
@@ -604,7 +604,7 @@ class KittenScraper(object):
         csv_rows[-1].append('Foster Experience')
         csv_rows[-1].append('Date {}s Received'.format(self.BASE_ANIMAL_TYPE.capitalize()))
         if self._dog_mode:
-            csv_rows[-1].append('Animal Details (Brief)')
+            csv_rows[-1].append('"Name, Breed, Color"')
         csv_rows[-1].append('Animal Details')
         csv_rows[-1].append('Special Animal Message')
 
@@ -698,12 +698,13 @@ class KittenScraper(object):
                                          's' if len(animals) > 1 else '',
                                          animal_data[animals[0]]['age'])
             for a in sorted(animals):
-                line += '\r{} ({}), S/N {}, {}, {}, {}'.format(a,
-                                                               animal_data[a]['gender_short'],
-                                                               animal_data[a]['sn'],
-                                                               animal_data[a]['name'],
-                                                               animal_data[a]['breed'],
-                                                               animal_data[a]['color'])
+                line += '\r{} ({}), S/N {}'.format(a,
+                                                   animal_data[a]['gender_short'],
+                                                   animal_data[a]['sn'])
+                if not self._dog_mode:
+                    line += ', {}, {}, {}'.format(animal_data[a]['name'],
+                                                  animal_data[a]['breed'],
+                                                  animal_data[a]['color'])
 
             animal_details += '{}{}'.format('\r' if animal_details else '', line)
 
