@@ -15,7 +15,7 @@ class GoogleSheetReader(SheetReaderBase):
             client = pygsheets.authorize(auth['google_client_secret'])
             spreadsheet = client.open_by_key(auth['google_spreadsheet_key'])
 
-            config_yaml = spreadsheet.worksheet_by_title(self._config_sheet_name)[2][1]
+            config_yaml = spreadsheet.worksheet_by_title(self._config_sheet_name)[2][0]
 
             for worksheet in spreadsheet.worksheets():
                 if not self._is_reserved_sheet(worksheet.title):
