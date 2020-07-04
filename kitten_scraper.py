@@ -313,6 +313,15 @@ class KittenScraper(object):
             animal_data[a] = {}
             animal_data[a]['message'] = special_msg
             status = self._get_selection_by_id('status')
+
+            if not status:
+                # Status text is usually found within a <select> element, but is sometimes found as innerText within the
+                # <td> that looks something like this: "Adopted - Awaiting Pickup\nChange Status"
+                try:
+                    status = self._get_property_by_xpath('innerText', '//*[@id="Table17"]/tbody/tr[5]/td[2]').split('\n')[0]
+                except:
+                    status = ''
+
             sub_status = self._get_selection_by_id('subStatus')
             animal_data[a]['status'] = '{}{}{}'.format(status, ' - ' if sub_status else '', sub_status)
             animal_data[a]['name'] = self._get_attr_by_id('animalname').strip()
@@ -726,6 +735,12 @@ class KittenScraper(object):
     def _get_attr_by_id(self, element_id):
         try:
             return self._driver.find_element_by_id(element_id).get_attribute('value')
+        except:
+            return ''
+
+    def _get_property_by_xpath(self, property, element_xpath):
+        try:
+            return self._driver.find_element_by_xpath(element_xpath).get_property(property)
         except:
             return ''
 
