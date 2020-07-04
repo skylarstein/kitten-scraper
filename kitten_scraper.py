@@ -479,7 +479,7 @@ class KittenScraper(object):
         if person_number in self._mentors:
             notes += '{}*** {} is a mentor'.format('\r' if len(notes) else '', full_name)
 
-        match_strings = emails.union([full_name])
+        match_strings = emails.union([full_name, str(person_number)])
         matching_sheets = self.mentor_sheet_reader.find_matching_mentors(match_strings)
         if matching_sheets:
             notes += '{}*** Found matching mentor(s): {}'.format('\r' if len(notes) else '', ', '.join([str(s) for s in matching_sheets]))

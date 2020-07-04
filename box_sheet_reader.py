@@ -26,7 +26,7 @@ class BoxSheetReader(SheetReaderBase):
                     sheet = xlxs_workbook.sheet_by_name(sheet_name)
                     self._mentor_sheets.append(sheet)
                     all_values = [sheet.row_values(i) for i in range(1, sheet.nrows)]
-                    self._flattend_sheet_values[utf8(sheet_name)] = [utf8(str(item)).lower() for sublist in all_values for item in sublist]
+                    self._mentor_match_values[utf8(sheet_name)] = [utf8(str(item)).lower() for sublist in all_values for item in sublist]
 
         except Exception as e:
             print_err('ERROR: Unable to load Feline Foster spreadsheet!\r\n{}, {}'.format(str(e), repr(e)))

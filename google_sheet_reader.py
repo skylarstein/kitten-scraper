@@ -20,8 +20,13 @@ class GoogleSheetReader(SheetReaderBase):
             for worksheet in spreadsheet.worksheets():
                 if not self._is_reserved_sheet(worksheet.title):
                     self._mentor_sheets.append(worksheet)
-                    all_values = worksheet.get_all_values(include_tailing_empty = False, include_tailing_empty_rows = False)
-                    self._flattend_sheet_values[utf8(worksheet.title)] = [utf8(item).lower() for sublist in all_values for item in sublist]
+
+                    # Build a list of mentee names/emails/ids to be used for mentor matching
+                    #
+                    mentor_match_cells = worksheet.get_values('B2', 'B{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
+                    mentor_match_cells += worksheet.get_values('C2', 'C{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
+                    mentor_match_cells += worksheet.get_values('E2', 'E{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
+                    self._mentor_match_values[utf8(worksheet.title)] = [utf8(item).lower() for sublist in mentor_match_cells for item in sublist]
 
         except Exception as e:
             print_err('ERROR: Unable to load Feline Foster spreadsheet!\r\n{}, {}'.format(str(e), repr(e)))
