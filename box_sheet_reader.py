@@ -77,3 +77,6 @@ class BoxSheetReader(SheetReaderBase):
             current_mentees.append({ 'mentor' : worksheet.name, 'mentees' : mentees})
 
         return current_mentees
+
+    def set_completed_mentees(self, mentor, mentee_ids):
+        print_err('NOT IMPLEMENTED: {} -> {}'.format(os.path.basename(__file__), 'set_completed_mentees()'))

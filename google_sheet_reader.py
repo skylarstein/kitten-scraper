@@ -1,3 +1,5 @@
+from datetime import date
+import os
 import pygsheets
 from kitten_utils import *
 from sheet_reader_base import SheetReaderBase
@@ -46,7 +48,7 @@ class GoogleSheetReader(SheetReaderBase):
 
             # It's much faster to grab a whole block of cells at once vs iterating through many API calls
             #
-            max_search_rows = min(50, worksheet.rows)
+            max_search_rows = min(100, worksheet.rows)
             cells = worksheet.range('A1:G{}'.format(max_search_rows), returnas='cells')
 
             name_col_id = self._find_column_by_name(cells, 'Name')
@@ -62,7 +64,7 @@ class GoogleSheetReader(SheetReaderBase):
                     break
 
                 elif str(cells[i][0].value).lower().find('completed mentees') >= 0:
-                    break # We've reach the end of the "active mentee" rows
+                    break # We've reached the end of the "active mentee" rows
 
                 elif cells[i][name_col_id].value and cells[i][pid_col_id].value:
                     mentee_name = cells[i][name_col_id].value
@@ -76,3 +78,30 @@ class GoogleSheetReader(SheetReaderBase):
             current_mentees.append({ 'mentor' : worksheet.title, 'mentees' : mentees})
 
         return current_mentees
+
+    def set_completed_mentees(self, mentor, mentee_ids):
+        ''' Mark the given mentees as completed.
+
+            Future refactoring consideration: Some similar code between set_completed_mentees() and get_current_mentees().
+        '''
+        for worksheet in self._mentor_sheets:
+            if worksheet.title.lower() == mentor.lower():
+                max_search_rows = min(100, worksheet.rows)
+                cells = worksheet.range('A1:G{}'.format(max_search_rows), returnas='cells')
+
+                name_col_id = self._find_column_by_name(cells, 'Name')
+                pid_col_id = self._find_column_by_name(cells, 'ID')
+
+                for i in range(1, max_search_rows):
+                    if str(cells[i][0].value).lower().find('completed mentees') >= 0:
+                        break # We've reached the end of the "active mentee" rows
+
+                    elif cells[i][name_col_id].value and cells[i][pid_col_id].value:
+                        pid = int(cells[i][pid_col_id].value)
+                        if pid in mentee_ids:
+                            mentee_name = cells[i][name_col_id].value
+                            print_debug("Completed: {} ({}) @ {}[{}]".format(mentee_name, pid, mentor, i))
+                            cells[i][name_col_id].set_text_format('strikethrough', True)
+                            current_value = cells[i][0].value
+                            if 'autoupdate: no animals' not in current_value.lower():
+                                cells[i][0].set_value('AutoUpdate: No animals {}\r\n{}'.format(date.today().strftime('%Y.%m.%d'), current_value))

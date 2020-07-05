@@ -15,6 +15,10 @@ class SheetReaderBase(metaclass=ABCMeta):
     def get_current_mentees(self):
         pass
 
+    @abstractmethod
+    def set_completed_mentees(self, mentor, mentee_ids):
+        pass
+
     def find_matching_mentors(self, match_strings):
         ''' Find mentor worksheets that match any string in match_strings. Not very sophisticated right now,
             I'm simply searching for a match anywhere in each mentor sheet.

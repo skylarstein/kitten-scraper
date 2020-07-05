@@ -566,16 +566,28 @@ class KittenScraper(object):
         with open(outfile, 'w') as f:
             current_mentees = self.mentor_sheet_reader.get_current_mentees()
             for current in current_mentees:
+                completed_mentee_ids = []
                 self._print_and_write(f, '-------------------------------------------')
                 self._print_and_write(f, current['mentor'])
                 if len(current['mentees']):
                     for mentee in current['mentees']:
                         current_animals = self._current_animals_fostered(mentee['name'], mentee['pid'])
-                        self._print_and_write(f, '    {} ({}) - {} animals'.format(mentee['name'].replace('\n', ' '), mentee['pid'], len(current_animals)))
+                        current_animal_count = len(current_animals)
+                        self._print_and_write(f, '    {} ({}) - {} animals'.format(mentee['name'].replace('\n', ' '),
+                                                                                   mentee['pid'],
+                                                                                   current_animal_count))
                         for a in current_animals:
                             self._print_and_write(f, ('        {} (S/N {})'.format(a, self._get_spay_neuter_status(a))))
+
+                        if not current_animal_count:
+                            completed_mentee_ids.append(mentee['pid'])
                 else:
                     self._print_and_write(f, '    ** No current mentees **')
+
+                # Mark completed mentees in the mentor spreadsheet
+                #
+                if len(completed_mentee_ids):
+                    self.mentor_sheet_reader.set_completed_mentees(current['mentor'], completed_mentee_ids)
 
                 self._print_and_write(f, '')
 
