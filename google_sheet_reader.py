@@ -99,9 +99,13 @@ class GoogleSheetReader(SheetReaderBase):
                     elif cells[i][name_col_id].value and cells[i][pid_col_id].value:
                         pid = int(cells[i][pid_col_id].value)
                         if pid in mentee_ids:
-                            mentee_name = cells[i][name_col_id].value
-                            print_debug("Completed: {} ({}) @ {}[{}]".format(mentee_name, pid, mentor, i))
-                            cells[i][name_col_id].set_text_format('strikethrough', True)
-                            current_value = cells[i][0].value
-                            if 'autoupdate: no animals' not in current_value.lower():
-                                cells[i][0].set_value('AutoUpdate: No animals {}\r\n{}'.format(date.today().strftime('%Y.%m.%d'), current_value))
+                            # If this mentee name cell is already marked with strikethrough, leave it alone
+                            #
+                            name_cell_format = cells[i][name_col_id].text_format
+                            if not name_cell_format or 'strikethrough' not in name_cell_format or name_cell_format['strikethrough'] is False:
+                                mentee_name = cells[i][name_col_id].value
+                                print_debug("Completed: {} ({}) @ {}[{}]".format(mentee_name, pid, mentor, i))
+                                cells[i][name_col_id].set_text_format('strikethrough', True)
+                                current_value = cells[i][0].value
+                                if 'autoupdate: no animals' not in current_value.lower():
+                                    cells[i][0].set_value('AutoUpdate: No animals {}\r\n{}'.format(date.today().strftime('%Y.%m.%d'), current_value))
