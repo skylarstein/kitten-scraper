@@ -596,7 +596,8 @@ class KittenScraper(object):
             if verbose_status:
                 print('')
             else:
-                print('active mentees = {}'.format(current['active_count']))
+                days_ago = (datetime.now() - current['most_recent']).days if current['most_recent'] else 'N/A'
+                print('active mentees = {}, last assigned days ago = {}'.format(current['active_count'], days_ago))
 
         if autoupdate_completed_mentees:
             # Flag completed mentees in the mentor spreadsheet

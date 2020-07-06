@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 import os
 import pygsheets
 from kitten_utils import *
@@ -12,7 +12,7 @@ class GoogleSheetReader(SheetReaderBase):
         ''' Load the feline foster spreadsheet
         '''
         try:
-            print_success('Loading mentors spreadsheet from Google Sheets (id = {})...'.format(auth['google_spreadsheet_key']))
+            print_success('Loading mentors spreadsheet from Google Sheets (id = \'{}\')...'.format(auth['google_spreadsheet_key']))
 
             client = pygsheets.authorize(auth['google_client_secret'])
             spreadsheet = client.open_by_key(auth['google_spreadsheet_key'])
@@ -53,9 +53,11 @@ class GoogleSheetReader(SheetReaderBase):
 
             name_col_id = self._find_column_by_name(cells, 'Name')
             pid_col_id = self._find_column_by_name(cells, 'ID')
+            date_col_id = self._find_column_by_name(cells, 'Date\nKittens\nReceived')
 
             mentees = []
             search_failed = False
+            most_recent_received_date = None
             for i in range(1, max_search_rows):
                 if i == max_search_rows - 1:
                     search_failed = True
@@ -69,14 +71,32 @@ class GoogleSheetReader(SheetReaderBase):
                 elif cells[i][name_col_id].value and cells[i][pid_col_id].value:
                     mentee_name = cells[i][name_col_id].value
                     pid = int(cells[i][pid_col_id].value)
+
+                    # Madness
+                    #
+                    try:
+                        received_date = datetime.strptime(cells[i][date_col_id].value, '%d-%b-%Y')
+                    except:
+                        try:
+                            received_date = datetime.strptime(cells[i][date_col_id].value, '%d-%B-%Y')
+                        except:
+                            try:
+                                received_date = datetime.strptime(cells[i][date_col_id].value, '%m/%d/%Y')
+                            except:
+                                received_date = None
+
+                    if received_date and (most_recent_received_date is None or received_date > most_recent_received_date):
+                        most_recent_received_date = received_date
+
                     if not [mentee for mentee in mentees if mentee['pid'] == pid]: # ignore duplicate mentees
                         mentees.append({'name' : mentee_name, 'pid' : pid})
 
             if not search_failed:
                 print('found {}'.format(len(mentees)))
 
-            current_mentees.append({ 'mentor' : worksheet.title, 'mentees' : mentees})
-
+            current_mentees.append({ 'mentor' : worksheet.title,
+                                     'mentees' : mentees,
+                                     'most_recent' : most_recent_received_date})
         return current_mentees
 
     def set_completed_mentees(self, mentor, mentee_ids):
