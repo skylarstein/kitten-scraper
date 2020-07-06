@@ -104,7 +104,7 @@ class GoogleSheetReader(SheetReaderBase):
                             name_cell_format = cells[i][name_col_id].text_format
                             if not name_cell_format or 'strikethrough' not in name_cell_format or name_cell_format['strikethrough'] is False:
                                 mentee_name = cells[i][name_col_id].value
-                                print_debug("Completed: {} ({}) @ {}[{}]".format(mentee_name, pid, mentor, i))
+                                print_debug('Completed: {} ({}) @ {}[\'{}\']'.format(mentee_name, pid, mentor, cells[i][name_col_id].label))
                                 cells[i][name_col_id].set_text_format('strikethrough', True)
                                 current_value = cells[i][0].value
                                 if 'autoupdate: no animals' not in current_value.lower():

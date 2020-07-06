@@ -24,17 +24,18 @@ from selenium.webdriver.support import expected_conditions as EC
 class KittenScraper(object):
     def run(self):
         print('Welcome to KittenScraper {}'.format(__version__))
+        start_time = time.time()
 
         arg_parser = ArgumentParser()
         arg_parser.add_argument('-i', '--input', help = 'specify the daily kitten report (xls), or optionally a comma-separated list of animal numbers', required = False)
         arg_parser.add_argument('-o', '--output', help = 'specify an output file (csv)', required = False)
-        arg_parser.add_argument('-s', '--status', help = 'save current mentee status to the given file (txt)', required = False)
-        arg_parser.add_argument('-c', '--config', help = 'specify a config file (optional, defaults to \'config.yaml\')', required = False, default='config.yaml')
+        arg_parser.add_argument('-s', '--mentee_status', help = 'look up current mentee status [verbose,autoupdate]', required = False, nargs='?', default='', const='yes')
+        arg_parser.add_argument('-c', '--config', help = 'specify a config file (optional, defaults to \'config.yaml\')', required = True)
         arg_parser.add_argument('-b', '--show_browser', help = 'show the browser window (generally for debugging)', required = False, action = 'store_true')
         arg_parser.add_argument('-d', '--dog_mode', help = 'enable dog mode', required = False, action = 'store_true')
         args = arg_parser.parse_args()
 
-        if not args.input and not args.status:
+        if not args.input and not args.mentee_status:
             arg_parser.print_help()
             sys.exit(0)
 
@@ -84,20 +85,15 @@ class KittenScraper(object):
         if not self._login():
             sys.exit()
 
-        if args.status:
-            # Look up current mentee status for each mentor
+        if args.mentee_status:
+            # Look up current mentee status for each mentor, optionally update completed mentee status in the spreadsheet
             #
-            start_time = time.time()
-            self._make_dir(args.status)
-            self._get_current_mentee_status(args.status)
-            print('Status completed in {0:.0f} seconds. Written to {1}\n'.format(time.time() - start_time, args.status))
+            self._get_current_mentee_status(args.mentee_status)
 
         if args.input:
             # Load animal numbers. Note that args.input will either be a path to the "daily report" xls, or may
             # optionally be a comma-separated list of animal numbers.
             #
-            start_time = time.time()
-
             if re.fullmatch(r'(\s?\d+\s?)(\s?,\s?\d+\s?)*$', args.input):
                 animal_numbers = [s.strip() for s in args.input.split(',')]
             else:
@@ -560,36 +556,54 @@ class KittenScraper(object):
         print(s)
         file.write('{}\r\n'.format(s))
 
-    def _get_current_mentee_status(self, outfile):
-        ''' Retrieve animals in foster for all current mentees
+    def _get_current_mentee_status(self, arg_mentee_status):
+        ''' Get current mentees and mentee status for each mentor
         '''
-        with open(outfile, 'w') as f:
-            current_mentees = self.mentor_sheet_reader.get_current_mentees()
-            for current in current_mentees:
-                completed_mentee_ids = []
-                self._print_and_write(f, '-------------------------------------------')
-                self._print_and_write(f, current['mentor'])
-                if len(current['mentees']):
-                    for mentee in current['mentees']:
-                        current_animals = self._current_animals_fostered(mentee['name'], mentee['pid'])
-                        current_animal_count = len(current_animals)
-                        self._print_and_write(f, '    {} ({}) - {} animals'.format(mentee['name'].replace('\n', ' '),
-                                                                                   mentee['pid'],
-                                                                                   current_animal_count))
+        verbose_status = 'verbose' in arg_mentee_status # print status of each animail assigned to a mentor
+        autoupdate_completed_mentees = 'autoupdate' in arg_mentee_status # mark 'completed' mentors in the spreadsheet
+        print_success('Looking up mentee status (verbose_status = {}, autoupdate_completed_mentees = {})...'.format(
+            verbose_status,
+            autoupdate_completed_mentees))
+
+        completed_mentees = {}
+        for current in self.mentor_sheet_reader.get_current_mentees():
+            current['active_count'] = 0
+            if verbose_status:
+                print('-------------------------------------------')
+                print(current['mentor'])
+            else:
+                print('Checking mentee status for {}... '.format(current['mentor']), end='')
+
+            if len(current['mentees']):
+                for mentee in current['mentees']:
+                    current_animals = self._current_animals_fostered(mentee['name'], mentee['pid'])
+                    current_animal_count = len(current_animals)
+                    if verbose_status:
+                        print('    {} ({}) - {} animals'.format(mentee['name'].replace('\n', ' '),
+                                                                                    mentee['pid'],
+                                                                                    current_animal_count))
                         for a in current_animals:
-                            self._print_and_write(f, ('        {} (S/N {})'.format(a, self._get_spay_neuter_status(a))))
+                            print(('        {} (S/N {})'.format(a, self._get_spay_neuter_status(a))))
 
-                        if not current_animal_count:
-                            completed_mentee_ids.append(mentee['pid'])
-                else:
-                    self._print_and_write(f, '    ** No current mentees **')
+                    if current_animal_count:
+                        current['active_count'] = current['active_count'] + 1
+                    else:
+                        completed_mentees.setdefault(current['mentor'], []).append(mentee['pid'])
 
-                # Mark completed mentees in the mentor spreadsheet
-                #
-                if len(completed_mentee_ids):
-                    self.mentor_sheet_reader.set_completed_mentees(current['mentor'], completed_mentee_ids)
+            elif verbose_status:
+                print('    ** No current mentees **')
 
-                self._print_and_write(f, '')
+            if verbose_status:
+                print('')
+            else:
+                print('active mentees = {}'.format(current['active_count']))
+
+        if autoupdate_completed_mentees:
+            # Flag completed mentees in the mentor spreadsheet
+            #
+            print_success('Auto-updating completed mentees in the mentor spreadsheet...')
+            for mentor in completed_mentees.keys():
+                self.mentor_sheet_reader.set_completed_mentees(mentor, completed_mentees[mentor])
 
     def _current_animals_fostered(self, person_name, person_number):
         current_animals = []
