@@ -28,8 +28,7 @@ class KittenScraper(object):
 
         arg_parser = ArgumentParser()
         arg_parser.add_argument('-i', '--input', help = 'specify the daily kitten report (xls), or optionally a comma-separated list of animal numbers', required = False)
-        arg_parser.add_argument('-o', '--output', help = 'specify an output file (csv)', required = False)
-        arg_parser.add_argument('-s', '--mentee_status', help = 'look up current mentee status [verbose,autoupdate]', required = False, nargs='?', default='', const='yes')
+        arg_parser.add_argument('-s', '--mentee_status', help = 'retrieve current mentee status [verbose,autoupdate,export]', required = False, nargs='?', default='', const='yes')
         arg_parser.add_argument('-c', '--config', help = 'specify a config file', required = True)
         arg_parser.add_argument('-b', '--show_browser', help = 'show the browser window (generally for debugging)', required = False, action = 'store_true')
         args = arg_parser.parse_args()
@@ -105,19 +104,37 @@ class KittenScraper(object):
             for person in foster_parents:
                 persons_data[person] = self._get_person_data(person)
 
-            # Save results to file. If args.out is empty, build a default path and file name
+            # Export mentee status to file (if '--mentee_status export')
             #
-            if not args.output:
-                args.output = os.path.join(default_dir(),
-                    '{}_foster_mentor_report_{}.csv'.format(self.BASE_ANIMAL_TYPE, date.today().strftime('%Y.%m.%d')))
+            if current_mentee_status:
+                status_file = os.path.join(default_dir(), '{}_foster_mentor_status_{}.txt'.format(self.BASE_ANIMAL_TYPE, date.today().strftime('%Y.%m.%d')))
+                with open(status_file, 'w') as f:
+                    for current in current_mentee_status:
+                        self._print_and_write(f, '--------------------------------------------------')
+                        self._print_and_write(f, current['mentor'])
+                        if len(current['mentees']):
+                            for mentee in current['mentees']:
+                                self._print_and_write(f, '    {} ({}) - {} animals'.format(mentee['name'],  mentee['pid'], len(mentee['current_animals'])))
+                                for a, data in mentee['current_animals'].items():
+                                    if 'sn' in data: # queried/populated if '--mentee_status verbose'
+                                        self._print_and_write(f, '        {} (S/N {})'.format(a, data['sn']))
+                                    else:
+                                        self._print_and_write(f, '        {}'.format(a))
+                        else:
+                            self._print_and_write(f, '    ** No current mentees **')
 
-            self._make_dir(args.output)
+                        self._print_and_write(f, '')
+
+            # Save report to file
+            #
+            output_csv = os.path.join(default_dir(), '{}_foster_mentor_report_{}.csv'.format(self.BASE_ANIMAL_TYPE, date.today().strftime('%Y.%m.%d')))
+            self._make_dir(output_csv)
             self._output_results(animal_data,
                                  foster_parents,
                                  persons_data,
                                  animals_not_in_foster,
                                  current_mentee_status,
-                                 args.output)
+                                 output_csv)
 
         print('KittenScraper completed in {0:.0f} seconds'.format(time.time() - start_time))
         self._exit_browser()
