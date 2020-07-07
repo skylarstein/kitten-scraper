@@ -71,19 +71,7 @@ class GoogleSheetReader(SheetReaderBase):
                 elif cells[i][name_col_id].value and cells[i][pid_col_id].value:
                     mentee_name = cells[i][name_col_id].value
                     pid = int(cells[i][pid_col_id].value)
-
-                    # Madness
-                    #
-                    try:
-                        received_date = datetime.strptime(cells[i][date_col_id].value, '%d-%b-%Y')
-                    except:
-                        try:
-                            received_date = datetime.strptime(cells[i][date_col_id].value, '%d-%B-%Y')
-                        except:
-                            try:
-                                received_date = datetime.strptime(cells[i][date_col_id].value, '%m/%d/%Y')
-                            except:
-                                received_date = None
+                    received_date = string_to_datetime(cells[i][date_col_id].value)
 
                     if received_date and (most_recent_received_date is None or received_date > most_recent_received_date):
                         most_recent_received_date = received_date
@@ -102,7 +90,7 @@ class GoogleSheetReader(SheetReaderBase):
     def set_completed_mentees(self, mentor, mentee_ids):
         ''' Mark the given mentees as completed.
 
-            Future refactoring consideration: Some similar code between set_completed_mentees() and get_current_mentees().
+            Future refactoring consideration: See similar code between set_completed_mentees() and get_current_mentees().
         '''
         for worksheet in self._mentor_sheets:
             if worksheet.title.lower() == mentor.lower():

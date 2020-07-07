@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import sys
 
@@ -71,3 +72,18 @@ def levenshtein_ratio(string1, string2, strip_no_case = True):
     distance = distances[-1][-1]
     distance_length = (rows + cols)
     return (distance_length - distance)/distance_length if distance_length else 0
+
+def string_to_datetime(date_str):
+    ''' Attempt to convert a date string (of various formats) into datetime
+    '''
+    try:
+        date_obj = datetime.strptime(date_str, '%d-%b-%Y')
+    except:
+        try:
+            date_obj = datetime.strptime(date_str, '%d-%B-%Y')
+        except:
+            try:
+                date_obj = datetime.strptime(date_str, '%m/%d/%Y')
+            except:
+                date_obj = None
+    return date_obj
