@@ -44,7 +44,7 @@ class GoogleSheetReader(SheetReaderBase):
         for worksheet in self._mentor_sheets:
             if worksheet.title.lower() == 'retired mentor':
                 continue
-            print('Loading current mentees for {}... '.format(worksheet.title), end='')
+            print('Loading current mentees for {}... '.format(worksheet.title), end='', flush=True)
 
             # It's much faster to grab a whole block of cells at once vs iterating through many API calls
             #
@@ -128,4 +128,4 @@ class GoogleSheetReader(SheetReaderBase):
                                 cells[i][name_col_id].set_text_format('strikethrough', True)
                                 current_value = cells[i][0].value
                                 if 'autoupdate: no animals' not in current_value.lower():
-                                    cells[i][0].set_value('AutoUpdate: No animals {}\r\n{}'.format(date.today().strftime('%Y.%m.%d'), current_value))
+                                    cells[i][0].set_value('AutoUpdate: No animals {}\r\n{}'.format(date.today().strftime('%b %-d, %Y'), current_value))

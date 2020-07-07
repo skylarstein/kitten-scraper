@@ -30,9 +30,8 @@ class KittenScraper(object):
         arg_parser.add_argument('-i', '--input', help = 'specify the daily kitten report (xls), or optionally a comma-separated list of animal numbers', required = False)
         arg_parser.add_argument('-o', '--output', help = 'specify an output file (csv)', required = False)
         arg_parser.add_argument('-s', '--mentee_status', help = 'look up current mentee status [verbose,autoupdate]', required = False, nargs='?', default='', const='yes')
-        arg_parser.add_argument('-c', '--config', help = 'specify a config file (optional, defaults to \'config.yaml\')', required = True)
+        arg_parser.add_argument('-c', '--config', help = 'specify a config file', required = True)
         arg_parser.add_argument('-b', '--show_browser', help = 'show the browser window (generally for debugging)', required = False, action = 'store_true')
-        arg_parser.add_argument('-d', '--dog_mode', help = 'enable dog mode', required = False, action = 'store_true')
         args = arg_parser.parse_args()
 
         if not args.input and not args.mentee_status:
@@ -43,16 +42,6 @@ class KittenScraper(object):
         #
         if not self._load_config_file(args.config):
             sys.exit()
-
-        if args.dog_mode:
-            self._dog_mode = True
-
-        if self._dog_mode:
-            print_warn('** Dog Mode is Active **')
-
-        self.YOUNG_ANIMAL_TYPE = 'kitten' if not self._dog_mode else 'puppy'
-        self.ADULT_ANIMAL_TYPE = 'cat' if not self._dog_mode else 'dog'
-        self.BASE_ANIMAL_TYPE = 'feline' if not self._dog_mode else 'canine'
 
         # Load the Foster Mentors spreadsheet
         #
@@ -68,7 +57,6 @@ class KittenScraper(object):
                 'box_user_id' : self._box_user_id,
                 'box_file_id' : self._box_file_id,
                 'box_jwt' : self._box_jwt})
-
         else:
             print_err('ERROR: Incorrect mentor spreadsheet configuration, please check config.yaml')
             sys.exit()
@@ -85,10 +73,7 @@ class KittenScraper(object):
         if not self._login():
             sys.exit()
 
-        if args.mentee_status:
-            # Look up current mentee status for each mentor, optionally update completed mentee status in the spreadsheet
-            #
-            self._get_current_mentee_status(args.mentee_status)
+        current_mentee_status = self._get_current_mentee_status(args.mentee_status) if args.mentee_status else None
 
         if args.input:
             # Load animal numbers. Note that args.input will either be a path to the "daily report" xls, or may
@@ -131,13 +116,10 @@ class KittenScraper(object):
                                  foster_parents,
                                  persons_data,
                                  animals_not_in_foster,
+                                 current_mentee_status,
                                  args.output)
 
-            print('\n{0} foster report completed in {1:.0f} seconds. Written to {2}'.format(
-                self.BASE_ANIMAL_TYPE.capitalize(),
-                time.time() - start_time,
-                args.output))
-
+        print('KittenScraper completed in {0:.0f} seconds'.format(time.time() - start_time))
         self._exit_browser()
 
     def _start_browser(self, show_browser):
@@ -221,6 +203,13 @@ class KittenScraper(object):
                 print_err('ERROR: Incomplete mentor spreadsheet configuration: {}'.format(config_file))
                 return False
 
+            if self._dog_mode:
+                print_warn('** Dog Mode is Active **')
+
+            self.YOUNG_ANIMAL_TYPE = 'kitten' if not self._dog_mode else 'puppy'
+            self.ADULT_ANIMAL_TYPE = 'cat' if not self._dog_mode else 'dog'
+            self.BASE_ANIMAL_TYPE = 'feline' if not self._dog_mode else 'canine'
+
         except yaml.YAMLError as err:
             print_err('ERROR: Unable to parse configuration file: {}, {}'.format(config_file, err))
             return False
@@ -275,7 +264,7 @@ class KittenScraper(object):
         foster_parents = {}
         animals_not_in_foster = set()
         for a in animal_numbers:
-            print('Looking up animal {}... '.format(a), end='')
+            print('Looking up animal {}... '.format(a), end='', flush=True)
             sys.stdout.flush()
             self._driver.get(self._animal_url.format(a))
             try:
@@ -432,7 +421,7 @@ class KittenScraper(object):
     def _get_person_data(self, person_number):
         ''' Load the given person number, return details and contact information
         '''
-        print('Looking up person {}... '.format(person_number), end='')
+        print('Looking up person {}... '.format(person_number), end='', flush=True)
         sys.stdout.flush()
 
         self._driver.get(self._search_url)
@@ -566,45 +555,36 @@ class KittenScraper(object):
             autoupdate_completed_mentees))
 
         completed_mentees = {}
-        for current in self.mentor_sheet_reader.get_current_mentees():
+        current_mentees = self.mentor_sheet_reader.get_current_mentees()
+        for current in current_mentees:
             current['active_count'] = 0
-            if verbose_status:
-                print('-------------------------------------------')
-                print(current['mentor'])
-            else:
-                print('Checking mentee status for {}... '.format(current['mentor']), end='')
+            print('Checking mentee status for {}... '.format(current['mentor']), end='', flush=True)
 
             if len(current['mentees']):
                 for mentee in current['mentees']:
-                    current_animals = self._current_animals_fostered(mentee['name'], mentee['pid'])
-                    current_animal_count = len(current_animals)
-                    if verbose_status:
-                        print('    {} ({}) - {} animals'.format(mentee['name'].replace('\n', ' '),
-                                                                                    mentee['pid'],
-                                                                                    current_animal_count))
-                        for a in current_animals:
-                            print(('        {} (S/N {})'.format(a, self._get_spay_neuter_status(a))))
+                    current_animal_ids = self._current_animals_fostered(mentee['name'], mentee['pid'])
+                    mentee['current_animals'] = {}
 
-                    if current_animal_count:
+                    for current_animal_id in current_animal_ids:
+                        if verbose_status:
+                            mentee['current_animals'][current_animal_id] = { 'sn' : self._get_spay_neuter_status(current_animal_id) }
+                        else:
+                            mentee['current_animals'][current_animal_id] = { }
+
+                    if len(current_animal_ids):
                         current['active_count'] = current['active_count'] + 1
                     else:
                         completed_mentees.setdefault(current['mentor'], []).append(mentee['pid'])
 
-            elif verbose_status:
-                print('    ** No current mentees **')
-
-            if verbose_status:
-                print('')
-            else:
-                days_ago = (datetime.now() - current['most_recent']).days if current['most_recent'] else 'N/A'
-                print('active mentees = {}, last assigned days ago = {}'.format(current['active_count'], days_ago))
+            days_ago = (datetime.now() - current['most_recent']).days if current['most_recent'] else 'N/A'
+            print('active mentees = {}, last assigned days ago = {}'.format(current['active_count'], days_ago))
 
         if autoupdate_completed_mentees:
-            # Flag completed mentees in the mentor spreadsheet
-            #
             print_success('Auto-updating completed mentees in the mentor spreadsheet...')
             for mentor in completed_mentees.keys():
                 self.mentor_sheet_reader.set_completed_mentees(mentor, completed_mentees[mentor])
+
+        return current_mentees
 
     def _current_animals_fostered(self, person_name, person_number):
         current_animals = []
@@ -624,7 +604,7 @@ class KittenScraper(object):
 
         return current_animals
 
-    def _output_results(self, animal_data, foster_parents, persons_data, animals_not_in_foster, csv_filename):
+    def _output_results(self, animal_data, foster_parents, persons_data, animals_not_in_foster, current_mentee_status, csv_filename):
         ''' Output all of our new super amazing results to a csv file
         '''
         print_success('Writing results to {}...'.format(csv_filename))
@@ -717,6 +697,12 @@ class KittenScraper(object):
                 for a in animals_not_in_foster:
                     outfile.write('{} - {}\n'.format(a, animal_data[a]['status']))
                     print('{} - {}'.format(a, animal_data[a]['status']))
+
+            if current_mentee_status:
+                outfile.write('\n\nMentor,Active Mentees,Last Assigned (days ago)\n')
+                for current in current_mentee_status:
+                    days_ago = (datetime.now() - current['most_recent']).days if current['most_recent'] else 'N/A'
+                    outfile.write('{},{},{}\n'.format(current['mentor'], current['active_count'], days_ago))
 
     def _get_animal_details_string(self, foster_animals, animal_data):
         ''' Group animals by type, list useful details for each animal
