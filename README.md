@@ -60,8 +60,7 @@ box_file_id : 'id'
 box_jwt : 'xxx_xxx_config.json'
 
 # Bonus configuration: Dog mode! There are some slight differences when running Kitten Scraper
-# with Canine Foster reports. To enable "dog mode", add the following line, or optionally
-# include -d or --dog_mode from the command line.
+# with Canine Foster reports. To enable "dog mode", add the following line:
 dog_mode : True
 ```
 
@@ -94,26 +93,23 @@ Box integration requires the creation of a new app via the Box Dev Console.
 
 ```text
 $ python3 kitten_scraper.py --help
-usage: kitten_scraper.py [-h] [-i INPUT] [-o OUTPUT] [-s STATUS] [-c CONFIG] [-b] [-d]
+usage: kitten_scraper.py [-h] [-c CONFIG] [-i INPUT] [-s STATUS] [-b]
 
 optional arguments:
   -h, --help            show this help message and exit
 
-  -i INPUT, --input INPUT
-                        specify the daily kitten report (xls), or optionally a comma-separated list of animal numbers
-
-  -o OUTPUT, --output OUTPUT
-                        specify an output file (csv)
-
-  -s STATUS, --status STATUS
-                        save current mentee status to the given file (txt)
-
   -c CONFIG, --config CONFIG
-                        specify a config file (optional, defaults to 'config.yaml')
+                        specify a config.yaml file
+
+  -i, --input INPUT     specify the daily kitten report (xls), or optionally a comma-separated list of animal numbers
+
+  -s, --mentee_status [verbose,autoupdate,export]
+                        retrieve current mentee status
+                        'verbose' : includes additional animal details
+                        'autoupdate' : flags completed mentees in the mentor spreadsheet
+                        'export' : exports mentee status to text file
 
   -b, --show_browser    show the browser window (generally for debugging)
-
-  -d, --dog_mode        enable dog mode
 ```
 
 ## Let's Do This
@@ -121,11 +117,11 @@ optional arguments:
 To generate a report, run kitten-scraper.py from the command line. Specify the path to the original feline foster report xls (--input) as well as the desired output file name (--output):
 
 ```text
-$ python3 kitten_scraper.py --input ~/Downloads/FosterReport-May12.xls --output ~/Desktop/UpdatedFosterReport-May12.csv
+$ python3 kitten_scraper.py --input ~/Downloads/FosterReport-May12.xls
 ```
 
-To create a mentee status report, use the --status option to save status to a given file:
+To create a mentee status report, include --mentee_status with 'export' to save a mentee status file to your Desktop
 
 ```text
-$ python3 kitten_scraper.py --status ~/Desktop/status.txt
+$ python3 kitten_scraper.py --mentee_status export,verbose
 ```
