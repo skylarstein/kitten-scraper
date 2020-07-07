@@ -1,5 +1,15 @@
 # 😺 [Kitten Scraper](https://github.com/skylarstein/kitten-scraper) Change Log
 
+## [2.2.0](https://github.com/skylarstein/kitten-scraper/compare/v2.1.0...v2.2.0) (2020-07-07)
+
+* Auto-update completed mentees in the mentor spreadsheet
+* Consider only name/email/id columns when searching for a matching mentor
+* Mentee/Mentor status refactoring: '--mentee_status [verbose,autoupdate,export]'
+* Include mentor/mentee status in CSV report (active mentee count, days since last mentee assignment)
+* -c/--config no longer optional
+* Removed -o/--output to keep things simple, output to ~/Desktop, will resurrect later if necessary
+* Update dependencies
+
 ## [2.1.0](https://github.com/skylarstein/kitten-scraper/compare/v2.0.8...v2.1.0) (2020-03-20)
 
 * Adds Box support for mentors spreadsheet
