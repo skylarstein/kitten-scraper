@@ -106,7 +106,7 @@ class KittenScraper(object):
 
             # Export mentee status to file (if '--mentee_status export')
             #
-            if current_mentee_status:
+            if 'export' in args.mentee_status and current_mentee_status:
                 status_file = os.path.join(default_dir(), '{}_foster_mentor_status_{}.txt'.format(self.BASE_ANIMAL_TYPE, date.today().strftime('%Y.%m.%d')))
                 with open(status_file, 'w') as f:
                     for current in current_mentee_status:
