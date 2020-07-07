@@ -79,4 +79,4 @@ class BoxSheetReader(SheetReaderBase):
         return current_mentees
 
     def set_completed_mentees(self, mentor, mentee_ids):
-        print_err('NOT IMPLEMENTED: {} -> {}'.format(os.path.basename(__file__), 'set_completed_mentees()'))
+        raise NotImplementedError('set_completed_mentees not implemented in {}'.format(__file__))
