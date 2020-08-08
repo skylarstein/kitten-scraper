@@ -136,6 +136,23 @@ class KittenScraper(object):
                                  current_mentee_status,
                                  output_csv)
 
+            # Optional: automatically forward this report via email
+            #
+            if 'generate_email' in self.config:
+                subject = self._get_from_dict(self.config['generate_email'], 'subject')
+                recipient_name = self._get_from_dict(self.config['generate_email'], 'recipient_name')
+                recipient_email = self._get_from_dict(self.config['generate_email'], 'recipient_email')
+                message = self._get_from_dict(self.config['generate_email'], 'message')
+
+                if None not in [subject, recipient_name, recipient_email, message]:
+                    from outlook_email import compose_outlook_email
+                    compose_outlook_email(subject=subject,
+                                          recipient_name=recipient_name,
+                                          recipient_email=recipient_email,
+                                          body=message,
+                                          attachment=output_csv)
+                    print_debug('Composed email to {} <{}>'.format(recipient_name, recipient_email))
+
         print('KittenScraper completed in {0:.0f} seconds'.format(time.time() - start_time))
         self._exit_browser()
 
@@ -204,17 +221,17 @@ class KittenScraper(object):
         '''
         try:
             config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), config_file_yaml)
-            config = yaml.load(open(config_file, 'r'), Loader=yaml.SafeLoader)
-            self._username = config['username']
-            self._password = config['password']
-            self._dog_mode = config['dog_mode'] if 'dog_mode' in config else False
+            self.config = yaml.load(open(config_file, 'r'), Loader=yaml.SafeLoader)
+            self._username = self.config['username']
+            self._password = self.config['password']
+            self._dog_mode = self.config['dog_mode'] if 'dog_mode' in self.config else False
 
-            self._google_spreadsheet_key = config['google_spreadsheet_key'] if 'google_spreadsheet_key' in config else None
-            self._google_client_secret = config['google_client_secret'] if 'google_client_secret' in config else None
+            self._google_spreadsheet_key = self.config['google_spreadsheet_key'] if 'google_spreadsheet_key' in self.config else None
+            self._google_client_secret = self.config['google_client_secret'] if 'google_client_secret' in self.config else None
 
-            self._box_user_id = config['box_user_id'] if 'box_user_id' in config else None
-            self._box_file_id = config['box_file_id'] if 'box_file_id' in config else None
-            self._box_jwt = config['box_jwt'] if 'box_jwt' in config else None
+            self._box_user_id = self.config['box_user_id'] if 'box_user_id' in self.config else None
+            self._box_file_id = self.config['box_file_id'] if 'box_file_id' in self.config else None
+            self._box_jwt = self.config['box_jwt'] if 'box_jwt' in self.config else None
 
             if not (self._google_spreadsheet_key and self._google_client_secret) and not (self._box_user_id and self._box_file_id and self._box_jwt):
                 print_err('ERROR: Incomplete mentor spreadsheet configuration: {}'.format(config_file))
@@ -561,6 +578,10 @@ class KittenScraper(object):
     def _print_and_write(self, file, s):
         print(s)
         file.write('{}\r\n'.format(s))
+
+    def _get_from_dict(self, dict, search_key):
+        result = [pair[search_key] for pair in dict if search_key in pair]
+        return result[0] if result else None
 
     def _get_current_mentee_status(self, arg_mentee_status):
         ''' Get current mentees and mentee status for each mentor
