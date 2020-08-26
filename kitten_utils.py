@@ -51,7 +51,7 @@ def levenshtein_ratio(string1, string2, strip_no_case = True):
     '''
     _string1 = string1.lower().strip() if strip_no_case else string1
     _string2 = string2.lower().strip() if strip_no_case else string2
-    
+
     rows = len(_string1)
     cols = len(_string2)
     distances = []

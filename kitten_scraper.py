@@ -29,7 +29,7 @@ class KittenScraper(object):
         arg_parser = ArgumentParser()
         arg_parser.add_argument('-i', '--input', help = 'specify the daily kitten report (xls), or optionally a comma-separated list of animal numbers', required = False)
         arg_parser.add_argument('-s', '--mentee_status', help = 'retrieve current mentee status [verbose,autoupdate,export]', required = False, nargs='?', default='', const='yes')
-        arg_parser.add_argument('-c', '--config', help = 'specify a config file', required = True)
+        arg_parser.add_argument('-c', '--config', help = 'specify a config file', required = False, default='config.yaml')
         arg_parser.add_argument('-b', '--show_browser', help = 'show the browser window (generally for debugging)', required = False, action = 'store_true')
         args = arg_parser.parse_args()
 
@@ -60,6 +60,10 @@ class KittenScraper(object):
             print_err('ERROR: Incorrect mentor spreadsheet configuration, please check config.yaml')
             sys.exit()
 
+        if self._additional_config_yaml is None:
+            print_err('ERROR: configuration YAML from mentors spreadsheet not found, cannot continue')
+            sys.exit()
+
         # Load additional config data from the mentors spreadsheet. This minimizes the need to deploy updates to the
         # local config.yaml file.
         #
@@ -82,7 +86,7 @@ class KittenScraper(object):
                 animal_numbers = [s.strip() for s in args.input.split(',')]
             else:
                 animal_numbers = KittenReportReader().read_animal_numbers_from_xls(args.input)
-    
+
             if not animal_numbers:
                 sys.exit()
 
@@ -526,7 +530,7 @@ class KittenScraper(object):
     def _prev_animals_fostered(self, person_number):
         ''' Determine the total number of animals this person has previously fostered. This is a useful metric to gauge
             experience level, but there are some difficulties interpreting the data without getting unnecessarily crazy
-            in here. Consider these numbers "a decent guess". 
+            in here. Consider these numbers "a decent guess".
 
             Load the list of all animals this person has been responsible for, page by page until we have no more pages.
         '''
@@ -715,7 +719,7 @@ class KittenScraper(object):
             csv_rows[-1].append('"{}"'.format(special_message))
 
             print('{} (Experience: {}, Loss Rate: {}%) {}{}{}'.format(name,
-                                                                      foster_experience, 
+                                                                      foster_experience,
                                                                       loss_rate,
                                                                       ConsoleFormat.GREEN,
                                                                       report_notes.replace('\r', ', '),
@@ -754,7 +758,7 @@ class KittenScraper(object):
             animals = animals_by_type[animal_type]
 
             line = '{} {}{} @ {}'.format(len(animals),
-                                         animal_type, 
+                                         animal_type,
                                          's' if len(animals) > 1 else '',
                                          animal_data[animals[0]]['age'])
             for a in sorted(animals):

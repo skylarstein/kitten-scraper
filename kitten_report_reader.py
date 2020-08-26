@@ -1,5 +1,5 @@
-import xlrd
 from datetime import datetime
+import xlrd
 from kitten_utils import *
 
 class KittenReportReader(object):

@@ -5,9 +5,6 @@ from kitten_utils import *
 from sheet_reader_base import SheetReaderBase
 
 class BoxSheetReader(SheetReaderBase):
-    def __init__(self):
-        super().__init__()
-
     def load_mentors_spreadsheet(self, auth):
         ''' Load the feline foster spreadsheet
         '''

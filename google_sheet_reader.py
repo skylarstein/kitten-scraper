@@ -1,13 +1,10 @@
-from datetime import date, datetime
+from datetime import date
 import os
 import pygsheets
 from kitten_utils import *
 from sheet_reader_base import SheetReaderBase
 
 class GoogleSheetReader(SheetReaderBase):
-    def __init__(self):
-        super().__init__()
-
     def load_mentors_spreadsheet(self, auth):
         ''' Load the feline foster spreadsheet
         '''
@@ -23,15 +20,18 @@ class GoogleSheetReader(SheetReaderBase):
                 if not self._is_reserved_sheet(worksheet.title):
                     self._mentor_sheets.append(worksheet)
 
-                    # Build a list of mentee names/emails/ids to be used for mentor matching
-                    #
-                    mentor_match_cells = worksheet.get_values('B2', 'B{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
-                    mentor_match_cells += worksheet.get_values('C2', 'C{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
-                    mentor_match_cells += worksheet.get_values('E2', 'E{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
-                    self._mentor_match_values[utf8(worksheet.title)] = [utf8(item).lower() for sublist in mentor_match_cells for item in sublist]
+                    try:
+                        # Build a list of mentee names/emails/ids to be used for mentor matching
+                        #
+                        mentor_match_cells = worksheet.get_values('B2', 'B{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
+                        mentor_match_cells += worksheet.get_values('C2', 'C{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
+                        mentor_match_cells += worksheet.get_values('E2', 'E{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
+                        self._mentor_match_values[utf8(worksheet.title)] = [utf8(item).lower() for sublist in mentor_match_cells for item in sublist]
+                    except Exception as e:
+                        print_debug('Unable to load mentor sheet \'{}\', maybe this isn\'t a mentor sheet'.format(worksheet.title))
 
         except Exception as e:
-            print_err('ERROR: Unable to load Feline Foster spreadsheet!\r\n{}, {}'.format(str(e), repr(e)))
+            print_err('ERROR: Unable to load mentors spreadsheet!\r\n{}, {}'.format(str(e), repr(e)))
             return None
 
         print('Loaded {} mentors from \"{}\"'.format(len(self._mentor_sheets), spreadsheet.title))

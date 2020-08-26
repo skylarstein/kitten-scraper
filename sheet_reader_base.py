@@ -27,7 +27,7 @@ class SheetReaderBase(metaclass=ABCMeta):
         matching_mentors = set()
 
         for sheet_name in self._mentor_match_values:
-            if len([item for item in self._mentor_match_values[sheet_name] if any(match in item for match in match_strings)]):
+            if [item for item in self._mentor_match_values[sheet_name] if any(match in item for match in match_strings)]:
                 matching_mentors.add(sheet_name)
 
         return matching_mentors
@@ -40,8 +40,9 @@ class SheetReaderBase(metaclass=ABCMeta):
 
     def _is_reserved_sheet(self, sheet_name):
         return sheet_name.lower() in ['contact info',
-                                      'updates',
+                                      'config',
                                       'announcements',
                                       'resources',
                                       'calendar',
+                                      'meetings/orientations dates',
                                       self._config_sheet_name.lower()]
