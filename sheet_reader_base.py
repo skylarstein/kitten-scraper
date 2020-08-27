@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from kitten_utils import *
+from kitten_utils import Utils
 
 class SheetReaderBase(metaclass=ABCMeta):
     def __init__(self):
@@ -23,7 +23,7 @@ class SheetReaderBase(metaclass=ABCMeta):
         ''' Find mentor worksheets that match any string in match_strings. Not very sophisticated right now,
             I'm simply searching for a match anywhere in each mentor sheet.
         '''
-        match_strings = [utf8(s).lower() for s in match_strings if s]
+        match_strings = [Utils.utf8(s).lower() for s in match_strings if s]
         matching_mentors = set()
 
         for sheet_name in self._mentor_match_values:

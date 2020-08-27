@@ -1,7 +1,7 @@
 import os
 import xlrd
 from boxsdk import Client, JWTAuth
-from kitten_utils import *
+from kitten_utils import Log, Utils
 from sheet_reader_base import SheetReaderBase
 
 class BoxSheetReader(SheetReaderBase):
@@ -9,7 +9,7 @@ class BoxSheetReader(SheetReaderBase):
         ''' Load the feline foster spreadsheet
         '''
         try:
-            print_success('Loading mentors spreadsheet from Box (id = {})...'.format(auth['box_file_id']))
+            Log.success('Loading mentors spreadsheet from Box (id = {})...'.format(auth['box_file_id']))
 
             jwt_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), auth['box_jwt'])
             client = Client(JWTAuth.from_settings_file(jwt_path))
@@ -23,10 +23,10 @@ class BoxSheetReader(SheetReaderBase):
                     sheet = xlxs_workbook.sheet_by_name(sheet_name)
                     self._mentor_sheets.append(sheet)
                     all_values = [sheet.row_values(i) for i in range(1, sheet.nrows)]
-                    self._mentor_match_values[utf8(sheet_name)] = [utf8(str(item)).lower() for sublist in all_values for item in sublist]
+                    self._mentor_match_values[Utils.utf8(sheet_name)] = [Utils.utf8(str(item)).lower() for sublist in all_values for item in sublist]
 
         except Exception as e:
-            print_err('ERROR: Unable to load Feline Foster spreadsheet!\r\n{}, {}'.format(str(e), repr(e)))
+            Log.error('ERROR: Unable to load Feline Foster spreadsheet!\r\n{}, {}'.format(str(e), repr(e)))
             return None
 
         print('Loaded {} mentors from \"{}\"'.format(len(self._mentor_sheets), box_file['name']))
@@ -55,7 +55,7 @@ class BoxSheetReader(SheetReaderBase):
             for i in range(1, max_search_rows):
                 if i == max_search_rows - 1:
                     search_failed = True
-                    print_err('Unable to determine current mentees for mentor {}'.format(worksheet.name))
+                    Log.error('Unable to determine current mentees for mentor {}'.format(worksheet.name))
                     mentees = []
                     break
 

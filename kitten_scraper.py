@@ -1,16 +1,11 @@
-from __init__ import __version__
+from argparse import ArgumentParser
+from datetime import date, datetime
 import os
 import re
 import math
 import sys
 import time
 import yaml
-from argparse import ArgumentParser
-from datetime import date, datetime
-from box_sheet_reader import BoxSheetReader
-from google_sheet_reader import GoogleSheetReader
-from kitten_report_reader import KittenReportReader
-from kitten_utils import *
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchElementException
@@ -20,8 +15,17 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from __init__ import __version__
+from box_sheet_reader import BoxSheetReader
+from google_sheet_reader import GoogleSheetReader
+from kitten_report_reader import KittenReportReader
+from kitten_utils import Log, Utils
 
 class KittenScraper(object):
+    def __init__(self):
+        self.mentor_sheet_reader = None
+        self._additional_config_yaml = None
+
     def run(self):
         print('Welcome to KittenScraper {}'.format(__version__))
         start_time = time.time()
@@ -57,11 +61,11 @@ class KittenScraper(object):
                 'box_file_id' : self._box_file_id,
                 'box_jwt' : self._box_jwt})
         else:
-            print_err('ERROR: Incorrect mentor spreadsheet configuration, please check config.yaml')
+            Log.error('ERROR: Incorrect mentor spreadsheet configuration, please check config.yaml')
             sys.exit()
 
         if self._additional_config_yaml is None:
-            print_err('ERROR: configuration YAML from mentors spreadsheet not found, cannot continue')
+            Log.error('ERROR: configuration YAML from mentors spreadsheet not found, cannot continue')
             sys.exit()
 
         # Load additional config data from the mentors spreadsheet. This minimizes the need to deploy updates to the
@@ -99,8 +103,8 @@ class KittenScraper(object):
             #
             animal_data, foster_parents, animals_not_in_foster = self._get_animal_data(animal_numbers)
 
-            for p in foster_parents:
-                print('Animals for foster parent {} = {}'.format(p, foster_parents[p]))
+            for p_number in foster_parents:
+                print('Animals for foster parent {} = {}'.format(p_number, foster_parents[p_number]))
 
             # Query details for each foster parent (name, contact details, etc.)
             #
@@ -111,19 +115,19 @@ class KittenScraper(object):
             # Export mentee status to file (if '--mentee_status export')
             #
             if 'export' in args.mentee_status and current_mentee_status:
-                status_file = os.path.join(default_dir(), '{}_foster_mentor_status_{}.txt'.format(self.BASE_ANIMAL_TYPE, date.today().strftime('%Y.%m.%d')))
+                status_file = os.path.join(Utils.default_dir(), '{}_foster_mentor_status_{}.txt'.format(self.BASE_ANIMAL_TYPE, date.today().strftime('%Y.%m.%d')))
                 with open(status_file, 'w') as f:
                     for current in current_mentee_status:
                         self._print_and_write(f, '--------------------------------------------------')
                         self._print_and_write(f, current['mentor'])
-                        if len(current['mentees']):
+                        if current['mentees']:
                             for mentee in current['mentees']:
                                 self._print_and_write(f, '    {} ({}) - {} animals'.format(mentee['name'],  mentee['pid'], len(mentee['current_animals'])))
-                                for a, data in mentee['current_animals'].items():
+                                for a_number, data in mentee['current_animals'].items():
                                     if 'sn' in data: # queried/populated if '--mentee_status verbose'
-                                        self._print_and_write(f, '        {} (S/N {})'.format(a, data['sn']))
+                                        self._print_and_write(f, '        {} (S/N {})'.format(a_number, data['sn']))
                                     else:
-                                        self._print_and_write(f, '        {}'.format(a))
+                                        self._print_and_write(f, '        {}'.format(a_number))
                         else:
                             self._print_and_write(f, '    ** No current mentees **')
 
@@ -131,8 +135,8 @@ class KittenScraper(object):
 
             # Save report to file
             #
-            output_csv = os.path.join(default_dir(), '{}_foster_mentor_report_{}.csv'.format(self.BASE_ANIMAL_TYPE, date.today().strftime('%Y.%m.%d')))
-            self._make_dir(output_csv)
+            output_csv = os.path.join(Utils.default_dir(), '{}_foster_mentor_report_{}.csv'.format(self.BASE_ANIMAL_TYPE, date.today().strftime('%Y.%m.%d')))
+            Utils.make_dir(output_csv)
             self._output_results(animal_data,
                                  foster_parents,
                                  persons_data,
@@ -143,19 +147,19 @@ class KittenScraper(object):
             # Optional: automatically forward this report via email
             #
             if 'generate_email' in self.config:
+                from outlook_email import compose_outlook_email
                 subject = self._get_from_dict(self.config['generate_email'], 'subject')
                 recipient_name = self._get_from_dict(self.config['generate_email'], 'recipient_name')
                 recipient_email = self._get_from_dict(self.config['generate_email'], 'recipient_email')
                 message = self._get_from_dict(self.config['generate_email'], 'message')
 
                 if None not in [subject, recipient_name, recipient_email, message]:
-                    from outlook_email import compose_outlook_email
                     compose_outlook_email(subject=subject,
                                           recipient_name=recipient_name,
                                           recipient_email=recipient_email,
                                           body=message,
                                           attachment=output_csv)
-                    print_debug('Composed email to {} <{}>'.format(recipient_name, recipient_email))
+                    Log.debug('Composed email to {} <{}>'.format(recipient_name, recipient_email))
 
         print('KittenScraper completed in {0:.0f} seconds'.format(time.time() - start_time))
         self._exit_browser()
@@ -169,7 +173,7 @@ class KittenScraper(object):
         if not show_browser:
             chrome_options.add_argument('--headless')
 
-        # TODO: Consider adding chromedriver-binary or chromedriver_installer to requirements.txt and
+        # Consider adding chromedriver-binary or chromedriver_installer to requirements.txt and
         # removing these local copies.
         #
         if sys.platform == 'darwin':
@@ -180,7 +184,7 @@ class KittenScraper(object):
             chromedriver_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'bin/win32/chromedriver')
             chrome_options.add_experimental_option('excludeSwitches', ['enable-logging']) # chromedriver complains a lot on Windows
         else:
-            print_err('Sorry friends, I haven\'t included chromedriver for your platform ({}). Exiting now.'.format(sys.platform))
+            Log.error('Sorry friends, I haven\'t included chromedriver for your platform ({}). Exiting now.'.format(sys.platform))
             sys.exit(0)
 
         self._driver = webdriver.Chrome(chromedriver_path, options = chrome_options)
@@ -195,17 +199,17 @@ class KittenScraper(object):
     def _login(self):
         ''' Load the login page, enter credentials, submit
         '''
-        print_success('Logging in...')
+        Log.success('Logging in...')
 
         try:
             self._driver.set_page_load_timeout(20)
             self._driver.get(self._login_url)
 
         except TimeoutException:
-            print_err('ERROR: Unable to load the login page. Please check your connection.')
+            Log.error('ERROR: Unable to load the login page. Please check your connection.')
             return False
         except NoSuchElementException:
-            print_err('ERROR: Unable to load the login page. Please check your connection.')
+            Log.error('ERROR: Unable to load the login page. Please check your connection.')
             return False
 
         try:
@@ -215,7 +219,7 @@ class KittenScraper(object):
             self._driver.find_element_by_id('Continue').click()
 
         except NoSuchElementException:
-            print_err('ERROR: Unable to login. Please check your username/password.')
+            Log.error('ERROR: Unable to login. Please check your username/password.')
             return False
 
         return True
@@ -238,26 +242,26 @@ class KittenScraper(object):
             self._box_jwt = self.config['box_jwt'] if 'box_jwt' in self.config else None
 
             if not (self._google_spreadsheet_key and self._google_client_secret) and not (self._box_user_id and self._box_file_id and self._box_jwt):
-                print_err('ERROR: Incomplete mentor spreadsheet configuration: {}'.format(config_file))
+                Log.error('ERROR: Incomplete mentor spreadsheet configuration: {}'.format(config_file))
                 return False
 
             if self._dog_mode:
-                print_warn('** Dog Mode is Active **')
+                Log.warn('** Dog Mode is Active **')
 
             self.YOUNG_ANIMAL_TYPE = 'kitten' if not self._dog_mode else 'puppy'
             self.ADULT_ANIMAL_TYPE = 'cat' if not self._dog_mode else 'dog'
             self.BASE_ANIMAL_TYPE = 'feline' if not self._dog_mode else 'canine'
 
         except yaml.YAMLError as err:
-            print_err('ERROR: Unable to parse configuration file: {}, {}'.format(config_file, err))
+            Log.error('ERROR: Unable to parse configuration file: {}, {}'.format(config_file, err))
             return False
 
         except IOError as err:
-            print_err('ERROR: Unable to read configuration file: {}, {}'.format(config_file, err))
+            Log.error('ERROR: Unable to read configuration file: {}, {}'.format(config_file, err))
             return False
 
         except KeyError as err:
-            print_err('ERROR: Missing value in configuration file: {}, {}'.format(config_file, err))
+            Log.error('ERROR: Missing value in configuration file: {}, {}'.format(config_file, err))
             return False
 
         return True
@@ -278,19 +282,19 @@ class KittenScraper(object):
             self._mentors = config['mentors'] if 'mentors' in config else []
 
         except AttributeError as err:
-            print_err('ERROR: Unable to read additional config: {}'.format(err))
+            Log.error('ERROR: Unable to read additional config: {}'.format(err))
             return False
 
         except yaml.YAMLError as err:
-            print_err('ERROR: Unable to read additional config: {}'.format(err))
+            Log.error('ERROR: Unable to read additional config: {}'.format(err))
             return False
 
         except TypeError as err:
-            print_err('ERROR: Invalid yaml in additional config: {}'.format(err))
+            Log.error('ERROR: Invalid yaml in additional config: {}'.format(err))
             return False
 
         except KeyError as err:
-            print_err('ERROR: Missing value in additional config: {}'.format(err))
+            Log.error('ERROR: Missing value in additional config: {}'.format(err))
             return False
 
         return True
@@ -301,10 +305,10 @@ class KittenScraper(object):
         animal_data = {}
         foster_parents = {}
         animals_not_in_foster = set()
-        for a in animal_numbers:
-            print('Looking up animal {}... '.format(a), end='', flush=True)
+        for a_number in animal_numbers:
+            print('Looking up animal {}... '.format(a_number), end='', flush=True)
             sys.stdout.flush()
-            self._driver.get(self._animal_url.format(a))
+            self._driver.get(self._animal_url.format(a_number))
             try:
                 # Dismiss alert (if found)
                 #
@@ -316,12 +320,12 @@ class KittenScraper(object):
                 # Wait for lazy-loaded content
                 #
                 WebDriverWait(self._driver, 10).until(EC.presence_of_element_located((By.ID, 'submitbtn2')))
-            except:
-                raise Exception('Timeout while waiting for content on search page!')
+            except Exception:
+                raise Exception('Timeout while waiting for content on search page!') from Exception
 
             # Get Special Message text (if it exists)
             #
-            special_msg = utf8(self._get_text_by_id('specialMessagesDialog'))
+            special_msg = Utils.utf8(self._get_text_by_id('specialMessagesDialog'))
 
             if special_msg:
                 # Remove text we don't care about
@@ -333,8 +337,8 @@ class KittenScraper(object):
                 special_msg = os.linesep.join([s for s in special_msg.splitlines() if s])
                 special_msg = special_msg.replace('"', '\'')
 
-            animal_data[a] = {}
-            animal_data[a]['message'] = special_msg
+            animal_data[a_number] = {}
+            animal_data[a_number]['message'] = special_msg
             status = self._get_selection_by_id('status')
 
             if not status:
@@ -342,28 +346,28 @@ class KittenScraper(object):
                 # <td> that looks something like this: "Adopted - Awaiting Pickup\nChange Status"
                 try:
                     status = self._get_property_by_xpath('innerText', '//*[@id="Table17"]/tbody/tr[5]/td[2]').split('\n')[0]
-                except:
+                except Exception:
                     status = ''
 
             sub_status = self._get_selection_by_id('subStatus')
-            animal_data[a]['status'] = '{}{}{}'.format(status, ' - ' if sub_status else '', sub_status)
-            animal_data[a]['name'] = self._get_attr_by_id('animalname').strip()
-            animal_data[a]['breed'] = self._get_attr_by_id('primaryBreed').strip()
-            animal_data[a]['primary_color'] = self._get_selection_by_id('primaryColour')
-            animal_data[a]['secondary_color'] = self._get_selection_by_id('secondaryColour')
-            animal_data[a]['gender'] = self._get_selection_by_id('sex')
+            animal_data[a_number]['status'] = '{}{}{}'.format(status, ' - ' if sub_status else '', sub_status)
+            animal_data[a_number]['name'] = self._get_attr_by_id('animalname').strip()
+            animal_data[a_number]['breed'] = self._get_attr_by_id('primaryBreed').strip()
+            animal_data[a_number]['primary_color'] = self._get_selection_by_id('primaryColour')
+            animal_data[a_number]['secondary_color'] = self._get_selection_by_id('secondaryColour')
+            animal_data[a_number]['gender'] = self._get_selection_by_id('sex')
 
             try:
                 age = datetime.now() - datetime.strptime(self._get_attr_by_id('dob'), '%m/%d/%Y')
-                animal_data[a]['age'], animal_data[a]['type'] = self._stringify_age_and_type(age)
-            except:
-                animal_data[a]['age'] = 'Unknown Age'
-                animal_data[a]['type'] = self.BASE_ANIMAL_TYPE
+                animal_data[a_number]['age'], animal_data[a_number]['type'] = self._stringify_age_and_type(age)
+            except Exception:
+                animal_data[a_number]['age'] = 'Unknown Age'
+                animal_data[a_number]['type'] = self.BASE_ANIMAL_TYPE
 
             try:
-                animal_data[a]['status_date'] = datetime.strptime(self._get_attr_by_id('statusdate'), '%m/%d/%Y').strftime('%-d-%b-%Y')
+                animal_data[a_number]['status_date'] = datetime.strptime(self._get_attr_by_id('statusdate'), '%m/%d/%Y').strftime('%-d-%b-%Y')
             except ValueError:
-                animal_data[a]['status_date'] = 'Unknown'
+                animal_data[a_number]['status_date'] = 'Unknown'
 
             # If this animal is currently in foster, get the responsible person (foster parent).
             # Dog mode: include all status other than 'adopted'
@@ -371,28 +375,28 @@ class KittenScraper(object):
             status = status.lower()
             if (self._dog_mode and 'adopted' not in status) or ('in foster' in status and 'unassisted death' not in status):
                 try:
-                    p = int(self._get_attr_by_xpath('href', '//*[@id="Table17"]/tbody/tr[1]/td[2]/a').split('personid=')[1])
-                    foster_parents.setdefault(p, []).append(a)
-                except:
-                    print_err('Failed to find foster parent for animal {}, please check report'.format(a))
+                    p_number = int(self._get_attr_by_xpath('href', '//*[@id="Table17"]/tbody/tr[1]/td[2]/a').split('personid=')[1])
+                    foster_parents.setdefault(p_number, []).append(a_number)
+                except Exception:
+                    Log.error('Failed to find foster parent for animal {}, please check report'.format(a_number))
             else:
-                animals_not_in_foster.add(a)
+                animals_not_in_foster.add(a_number)
 
-            animal_data[a]['sn'] = self._get_spay_neuter_status(a) # Do this last, this will load a new web page!
+            animal_data[a_number]['sn'] = self._get_spay_neuter_status(a_number) # Do this last, this will load a new web page!
 
             # Create some helpful/default string representations
             #
             set_default = lambda str, default : default if str.strip() in [None, ''] else str
 
-            animal_data[a]['sn'] = set_default(animal_data[a]['sn'], 'Unknown')
-            animal_data[a]['status'] = set_default(animal_data[a]['status'], 'Status Unknown')
-            animal_data[a]['name'] = set_default(animal_data[a]['name'], 'Unnamed')
-            animal_data[a]['breed'] = set_default(animal_data[a]['breed'], 'Unknown Breed')
-            animal_data[a]['gender'] = set_default(animal_data[a]['gender'], 'Unknown Gender')
-            animal_data[a]['color'] = set_default(animal_data[a]['primary_color'], 'Unknown Color')
+            animal_data[a_number]['sn'] = set_default(animal_data[a_number]['sn'], 'Unknown')
+            animal_data[a_number]['status'] = set_default(animal_data[a_number]['status'], 'Status Unknown')
+            animal_data[a_number]['name'] = set_default(animal_data[a_number]['name'], 'Unnamed')
+            animal_data[a_number]['breed'] = set_default(animal_data[a_number]['breed'], 'Unknown Breed')
+            animal_data[a_number]['gender'] = set_default(animal_data[a_number]['gender'], 'Unknown Gender')
+            animal_data[a_number]['color'] = set_default(animal_data[a_number]['primary_color'], 'Unknown Color')
 
-            if animal_data[a]['secondary_color'].strip() not in [None, '', 'None']:
-                animal_data[a]['color'] += '/{}'.format(animal_data[a]['secondary_color'])
+            if animal_data[a_number]['secondary_color'].strip() not in [None, '', 'None']:
+                animal_data[a_number]['color'] += '/{}'.format(animal_data[a_number]['secondary_color'])
 
             breed_abbreviations = {
                 # 'Breed' is a free-form text field and not everyone enters data exactly the same. I'll compare against
@@ -402,18 +406,18 @@ class KittenScraper(object):
                 'domesticmediumhair' : 'DMH',
                 'domesticlonghair'   : 'DLH' }
 
-            abbreviation = breed_abbreviations.get(animal_data[a]['breed'].replace(' ', '').lower())
+            abbreviation = breed_abbreviations.get(animal_data[a_number]['breed'].replace(' ', '').lower())
             if abbreviation:
-                animal_data[a]['breed'] = abbreviation
+                animal_data[a_number]['breed'] = abbreviation
 
-            if animal_data[a]['gender'].lower() == 'male':
-                animal_data[a]['gender_short'] = 'M'
-            elif animal_data[a]['gender'].lower() == 'female':
-                animal_data[a]['gender_short'] = 'F'
+            if animal_data[a_number]['gender'].lower() == 'male':
+                animal_data[a_number]['gender_short'] = 'M'
+            elif animal_data[a_number]['gender'].lower() == 'female':
+                animal_data[a_number]['gender_short'] = 'F'
             else:
-                animal_data[a]['gender_short'] = animal_data[a]['gender']
+                animal_data[a_number]['gender_short'] = animal_data[a_number]['gender']
 
-            print('{}'.format(animal_data[a]['status']))
+            print('{}'.format(animal_data[a_number]['status']))
 
         return animal_data, foster_parents, animals_not_in_foster
 
@@ -434,13 +438,13 @@ class KittenScraper(object):
             elif age.days >= 90:
                 months = math.floor(age.days / 30)
                 age_string = '{} month{}'.format(months, 's' if months > 1 else '')
-                animal_type = self.YOUNG_ANIMAL_TYPE if age.days <= (365 / 2) else ADULT_ANIMAL_TYPE
+                animal_type = self.YOUNG_ANIMAL_TYPE if age.days <= (365 / 2) else self.ADULT_ANIMAL_TYPE
 
             else:
                 weeks = math.floor(age.days / 7)
                 age_string = '{} week{}'.format(weeks, 's' if weeks > 1 else '')
                 animal_type = self.YOUNG_ANIMAL_TYPE
-        except:
+        except Exception:
             animal_type = self.BASE_ANIMAL_TYPE
             age_string = 'Unknown Age'
 
@@ -451,9 +455,9 @@ class KittenScraper(object):
         '''
         try:
             self._driver.get(self._medical_details_url.format(animal_number))
-            return utf8(self._get_attr_by_xpath('innerText', '/html/body/center/table[2]/tbody/tr[2]/td/table/tbody/tr[4]/td[4]'))
-        except:
-            print_err('Failed to read spay/neuter status for animal {}'.format(animal_number))
+            return Utils.utf8(self._get_attr_by_xpath('innerText', '/html/body/center/table[2]/tbody/tr[2]/td/table/tbody/tr[4]/td[4]'))
+        except Exception:
+            Log.error('Failed to read spay/neuter status for animal {}'.format(animal_number))
             return 'Unknown'
 
     def _get_person_data(self, person_number):
@@ -483,7 +487,7 @@ class KittenScraper(object):
         prev_animals_fostered, euthanized_count, unassisted_death_count = self._prev_animals_fostered(person_number)
 
         full_name = preferred_name if preferred_name else first_name if first_name else ''
-        full_name += ' ' if len(full_name) else ''
+        full_name += ' ' if full_name else ''
         full_name += last_name if last_name else ''
 
         notes = ''
@@ -500,12 +504,12 @@ class KittenScraper(object):
                     break
 
         if person_number in self._mentors:
-            notes += '{}*** {} is a mentor'.format('\r' if len(notes) else '', full_name)
+            notes += '{}*** {} is a mentor'.format('\r' if notes else '', full_name)
 
         match_strings = emails.union([full_name, str(person_number)])
         matching_sheets = self.mentor_sheet_reader.find_matching_mentors(match_strings)
         if matching_sheets:
-            notes += '{}*** Found matching mentor(s): {}'.format('\r' if len(notes) else '', ', '.join([str(s) for s in matching_sheets]))
+            notes += '{}*** Found matching mentor(s): {}'.format('\r' if notes else '', ', '.join([str(s) for s in matching_sheets]))
 
         loss_rate = 0.0
         if prev_animals_fostered > 0:
@@ -583,8 +587,8 @@ class KittenScraper(object):
         print(s)
         file.write('{}\r\n'.format(s))
 
-    def _get_from_dict(self, dict, search_key):
-        result = [pair[search_key] for pair in dict if search_key in pair]
+    def _get_from_dict(self, search_dict, search_key):
+        result = [pair[search_key] for pair in search_dict if search_key in pair]
         return result[0] if result else None
 
     def _get_current_mentee_status(self, arg_mentee_status):
@@ -592,7 +596,7 @@ class KittenScraper(object):
         '''
         verbose_status = 'verbose' in arg_mentee_status # print status of each animail assigned to a mentor
         autoupdate_completed_mentees = 'autoupdate' in arg_mentee_status # mark 'completed' mentors in the spreadsheet
-        print_success('Looking up mentee status (verbose_status = {}, autoupdate_completed_mentees = {})...'.format(
+        Log.success('Looking up mentee status (verbose_status = {}, autoupdate_completed_mentees = {})...'.format(
             verbose_status,
             autoupdate_completed_mentees))
 
@@ -602,9 +606,9 @@ class KittenScraper(object):
             current['active_count'] = 0
             print('Checking mentee status for {}... '.format(current['mentor']), end='', flush=True)
 
-            if len(current['mentees']):
+            if current['mentees']:
                 for mentee in current['mentees']:
-                    current_animal_ids = self._current_animals_fostered(mentee['name'], mentee['pid'])
+                    current_animal_ids = self._current_animals_fostered(mentee['pid'])
                     mentee['current_animals'] = {}
 
                     for current_animal_id in current_animal_ids:
@@ -613,7 +617,7 @@ class KittenScraper(object):
                         else:
                             mentee['current_animals'][current_animal_id] = { }
 
-                    if len(current_animal_ids):
+                    if current_animal_ids:
                         current['active_count'] = current['active_count'] + 1
                     else:
                         completed_mentees.setdefault(current['mentor'], []).append(mentee['pid'])
@@ -622,13 +626,13 @@ class KittenScraper(object):
             print('active mentees = {}, last assigned days ago = {}'.format(current['active_count'], days_ago))
 
         if autoupdate_completed_mentees:
-            print_success('Auto-updating completed mentees in the mentor spreadsheet...')
+            Log.success('Auto-updating completed mentees in the mentor spreadsheet...')
             for mentor in completed_mentees.keys():
                 self.mentor_sheet_reader.set_completed_mentees(mentor, completed_mentees[mentor])
 
         return current_mentees
 
-    def _current_animals_fostered(self, person_name, person_number):
+    def _current_animals_fostered(self, person_number):
         current_animals = []
         self._driver.get(self._responsible_for_url.format(person_number))
         try:
@@ -649,7 +653,7 @@ class KittenScraper(object):
     def _output_results(self, animal_data, foster_parents, persons_data, animals_not_in_foster, current_mentee_status, csv_filename):
         ''' Output all of our new super amazing results to a csv file
         '''
-        print_success('Writing results to {}...'.format(csv_filename))
+        Log.success('Writing results to {}...'.format(csv_filename))
         csv_rows = []
 
         csv_rows.append([])
@@ -680,10 +684,10 @@ class KittenScraper(object):
             foster_experience = 'NEW' if not prev_animals_fostered else '{}'.format(prev_animals_fostered)
 
             special_message = ''
-            for a in animals_with_this_person:
-                msg = animal_data[a]['message']
+            for a_number in animals_with_this_person:
+                msg = animal_data[a_number]['message']
                 if msg:
-                    special_message += '{}{}: {}'.format('\r\r' if special_message else '', a, msg)
+                    special_message += '{}{}: {}'.format('\r\r' if special_message else '', a_number, msg)
 
             cell_number = person_data['cell_phone']
             home_number = person_data['home_phone']
@@ -693,9 +697,9 @@ class KittenScraper(object):
             if len(home_number) >= 10: # ignore incomplete phone numbers
                 phone += '{}(H) {}'.format('\r' if phone else '', home_number)
 
-            email = ''
-            for e in person_data['emails']:
-                email += '{}{}'.format('\r' if email else '', e)
+            emails_str = ''
+            for email in person_data['emails']:
+                emails_str += '{}{}'.format('\r' if emails_str else '', email)
 
             # I will assume all animals in this group went into foster on the same date. This should usually be true
             # since this is designed to processed with a "daily report".
@@ -708,7 +712,7 @@ class KittenScraper(object):
             csv_rows[-1].append('"{}"'.format(report_notes))
             csv_rows[-1].append('"{}%"'.format(loss_rate))
             csv_rows[-1].append('"{}"'.format(name))
-            csv_rows[-1].append('"{}"'.format(email))
+            csv_rows[-1].append('"{}"'.format(emails_str))
             csv_rows[-1].append('"{}"'.format(phone))
             csv_rows[-1].append('="{}"'.format(person_number))
             csv_rows[-1].append('"{}"'.format(foster_experience))
@@ -721,24 +725,24 @@ class KittenScraper(object):
             print('{} (Experience: {}, Loss Rate: {}%) {}{}{}'.format(name,
                                                                       foster_experience,
                                                                       loss_rate,
-                                                                      ConsoleFormat.GREEN,
+                                                                      Log.GREEN,
                                                                       report_notes.replace('\r', ', '),
-                                                                      ConsoleFormat.END))
+                                                                      Log.END))
         with open(csv_filename, 'w') as outfile:
             for row in csv_rows:
                 outfile.write(','.join(row))
                 outfile.write('\n')
 
-            if not len(foster_parents):
+            if not foster_parents:
                 outfile.write('*** None of the animals in this report are currently in foster\n')
-                print_warn('None of the animals in this report are currently in foster. Nothing to do!')
+                Log.warn('None of the animals in this report are currently in foster. Nothing to do!')
 
-            if len(animals_not_in_foster):
+            if animals_not_in_foster:
                 outfile.write('\n\n\n*** Animals not in foster\n')
-                print_warn('\nAnimals not in foster')
-                for a in animals_not_in_foster:
-                    outfile.write('{} - {}\n'.format(a, animal_data[a]['status']))
-                    print('{} - {}'.format(a, animal_data[a]['status']))
+                Log.warn('\nAnimals not in foster')
+                for a_number in animals_not_in_foster:
+                    outfile.write('{} - {}\n'.format(a_number, animal_data[a_number]['status']))
+                    print('{} - {}'.format(a_number, animal_data[a_number]['status']))
 
             if current_mentee_status:
                 outfile.write('\n\nMentor,Active Mentees,Last Assigned (days ago)\n')
@@ -750,79 +754,73 @@ class KittenScraper(object):
         ''' Group animals by type, list useful details for each animal
         '''
         animals_by_type = {}
-        for a in foster_animals:
-            animals_by_type.setdefault(animal_data[a]['type'], []).append(a)
+        for a_number in foster_animals:
+            animals_by_type.setdefault(animal_data[a_number]['type'], []).append(a_number)
 
         animal_details = ''
         for animal_type in animals_by_type.keys():
             animals = animals_by_type[animal_type]
-
             line = '{} {}{} @ {}'.format(len(animals),
                                          animal_type,
                                          's' if len(animals) > 1 else '',
                                          animal_data[animals[0]]['age'])
-            for a in sorted(animals):
-                line += '\r{} ({}), S/N {}'.format(a,
-                                                   animal_data[a]['gender_short'],
-                                                   animal_data[a]['sn'])
+            for a_number in sorted(animals):
+                line += '\r{} ({}), S/N {}'.format(a_number,
+                                                   animal_data[a_number]['gender_short'],
+                                                   animal_data[a_number]['sn'])
                 if not self._dog_mode:
-                    line += ', {}, {}, {}'.format(animal_data[a]['name'],
-                                                  animal_data[a]['breed'],
-                                                  animal_data[a]['color'])
+                    line += ', {}, {}, {}'.format(animal_data[a_number]['name'],
+                                                  animal_data[a_number]['breed'],
+                                                  animal_data[a_number]['color'])
 
             animal_details += '{}{}'.format('\r' if animal_details else '', line)
 
         animal_details_brief = ''
-        for a in sorted(foster_animals):
+        for a_number in sorted(foster_animals):
             animal_details_brief += '{}{} - {}, {}, {}'.format('\r' if animal_details_brief else '',
-                                                               a,
-                                                               animal_data[a]['name'],
-                                                               animal_data[a]['breed'],
-                                                               animal_data[a]['color'])
+                                                               a_number,
+                                                               animal_data[a_number]['name'],
+                                                               animal_data[a_number]['breed'],
+                                                               animal_data[a_number]['color'])
         return animal_details, animal_details_brief
 
     def _get_text_by_id(self, element_id):
         try:
             return self._driver.find_element_by_id(element_id).text
-        except:
+        except Exception:
             return ''
 
     def _get_attr_by_id(self, element_id):
         try:
             return self._driver.find_element_by_id(element_id).get_attribute('value')
-        except:
+        except Exception:
             return ''
 
-    def _get_property_by_xpath(self, property, element_xpath):
+    def _get_property_by_xpath(self, property_name, element_xpath):
         try:
-            return self._driver.find_element_by_xpath(element_xpath).get_property(property)
-        except:
+            return self._driver.find_element_by_xpath(element_xpath).get_property(property_name)
+        except Exception:
             return ''
 
     def _get_attr_by_xpath(self, attr, element_xpath):
         try:
             return self._driver.find_element_by_xpath(element_xpath).get_attribute(attr)
-        except:
+        except Exception:
             return ''
 
     def _get_checked_by_id(self, element_id):
         try:
             attr = self._driver.find_element_by_id(element_id).get_attribute('checked')
-            return True if attr else False
-        except:
+            return bool(attr)
+        except Exception:
             return False
 
     def _get_selection_by_id(self, element_id):
         try:
             select_element = Select(self._driver.find_element_by_id(element_id))
             return select_element.first_selected_option.text
-        except:
+        except Exception:
             return ''
-
-    def _make_dir(self, fullpath):
-        dirname = os.path.dirname(fullpath)
-        if dirname and not os.path.exists(dirname):
-            os.makedirs(dirname)
 
 if __name__ == "__main__":
     KittenScraper().run()

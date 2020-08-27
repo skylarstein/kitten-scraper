@@ -1,8 +1,8 @@
 .DS_Store
 .vscode
-config.yaml
+config*.yaml
 *.pyc
 sheets.googleapis.com-python.json
-client_secret*.json
-/tmp
+*client_secret*.json
+*.pylintrc
 

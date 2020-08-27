@@ -1,11 +1,15 @@
 from datetime import datetime
 import xlrd
-from kitten_utils import *
+from kitten_utils import Log
 
 class KittenReportReader(object):
     ''' KittenReportReader will load animal numbers from the incoming daily foster report. All other data will be
         queried during runtime since other data in the report may already be outdated (or even initially incorrect).
     '''
+    def __init__(self):
+        self._workbook = None
+        self._sheet = None
+
     def read_animal_numbers_from_xls(self, xls_filename):
         ''' Open the daily report xls, read animal numbers
         '''
@@ -14,7 +18,7 @@ class KittenReportReader(object):
             self._sheet = self._workbook.sheet_by_index(0)
 
             if not self._sheet.nrows:
-                print_err('ERROR: I\'m afraid you have an empty report: {}'.format(xls_filename))
+                Log.error('ERROR: I\'m afraid you have an empty report: {}'.format(xls_filename))
                 return None
 
             # Perform some initial sanity checks
@@ -33,10 +37,10 @@ class KittenReportReader(object):
                 self._sheet.row_values(0)[ANIMAL_AGE_COL] != 'Age' or
                 self._sheet.row_values(0)[FOSTER_PARENT_ID_COL] != 'Foster Parent ID'):
 
-                print_err('ERROR: Unexpected column layout in the report. Something has changed! {}'.format(xls_filename))
+                Log.error('ERROR: Unexpected column layout in the report. Something has changed! {}'.format(xls_filename))
                 return None
 
-            print_success('Loaded report {}'.format(xls_filename))
+            Log.success('Loaded report {}'.format(xls_filename))
 
             animal_numbers = set()
             for row_number in range(1, self._sheet.nrows):
@@ -49,10 +53,10 @@ class KittenReportReader(object):
             return animal_numbers
 
         except IOError as err:
-            print_err('ERROR: Unable to read xls file: {}, {}'.format(xls_filename, err))
+            Log.error('ERROR: Unable to read xls file: {}, {}'.format(xls_filename, err))
 
         except xlrd.XLRDError as err:
-            print_err('ERROR: Unable to read xls file: {}, {}'.format(xls_filename, err))
+            Log.error('ERROR: Unable to read xls file: {}, {}'.format(xls_filename, err))
 
         return None
 

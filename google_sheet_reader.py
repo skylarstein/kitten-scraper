@@ -1,7 +1,6 @@
 from datetime import date
-import os
 import pygsheets
-from kitten_utils import *
+from kitten_utils import Log, Utils
 from sheet_reader_base import SheetReaderBase
 
 class GoogleSheetReader(SheetReaderBase):
@@ -9,7 +8,7 @@ class GoogleSheetReader(SheetReaderBase):
         ''' Load the feline foster spreadsheet
         '''
         try:
-            print_success('Loading mentors spreadsheet from Google Sheets (id = \'{}\')...'.format(auth['google_spreadsheet_key']))
+            Log.success('Loading mentors spreadsheet from Google Sheets (id = \'{}\')...'.format(auth['google_spreadsheet_key']))
 
             client = pygsheets.authorize(auth['google_client_secret'])
             spreadsheet = client.open_by_key(auth['google_spreadsheet_key'])
@@ -26,12 +25,12 @@ class GoogleSheetReader(SheetReaderBase):
                         mentor_match_cells = worksheet.get_values('B2', 'B{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
                         mentor_match_cells += worksheet.get_values('C2', 'C{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
                         mentor_match_cells += worksheet.get_values('E2', 'E{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
-                        self._mentor_match_values[utf8(worksheet.title)] = [utf8(item).lower() for sublist in mentor_match_cells for item in sublist]
-                    except Exception as e:
-                        print_debug('Unable to load mentor sheet \'{}\', maybe this isn\'t a mentor sheet'.format(worksheet.title))
+                        self._mentor_match_values[Utils.utf8(worksheet.title)] = [Utils.utf8(item).lower() for sublist in mentor_match_cells for item in sublist]
+                    except Exception:
+                        Log.debug('Unable to load mentor sheet \'{}\', maybe this isn\'t a mentor sheet'.format(worksheet.title))
 
         except Exception as e:
-            print_err('ERROR: Unable to load mentors spreadsheet!\r\n{}, {}'.format(str(e), repr(e)))
+            Log.error('ERROR: Unable to load mentors spreadsheet!\r\n{}, {}'.format(str(e), repr(e)))
             return None
 
         print('Loaded {} mentors from \"{}\"'.format(len(self._mentor_sheets), spreadsheet.title))
@@ -61,7 +60,7 @@ class GoogleSheetReader(SheetReaderBase):
             for i in range(1, max_search_rows):
                 if i == max_search_rows - 1:
                     search_failed = True
-                    print_err('Unable to determine current mentees for mentor {}'.format(worksheet.title))
+                    Log.error('Unable to determine current mentees for mentor {}'.format(worksheet.title))
                     mentees = []
                     break
 
@@ -71,7 +70,7 @@ class GoogleSheetReader(SheetReaderBase):
                 elif cells[i][name_col_id].value and cells[i][pid_col_id].value:
                     mentee_name = cells[i][name_col_id].value
                     pid = int(cells[i][pid_col_id].value)
-                    received_date = string_to_datetime(cells[i][date_col_id].value)
+                    received_date = Utils.string_to_datetime(cells[i][date_col_id].value)
 
                     if received_date and (most_recent_received_date is None or received_date > most_recent_received_date):
                         most_recent_received_date = received_date
@@ -112,7 +111,7 @@ class GoogleSheetReader(SheetReaderBase):
                             name_cell_format = cells[i][name_col_id].text_format
                             if not name_cell_format or 'strikethrough' not in name_cell_format or name_cell_format['strikethrough'] is False:
                                 mentee_name = cells[i][name_col_id].value
-                                print_debug('Completed: {} ({}) @ {}[\'{}\']'.format(mentee_name, pid, mentor, cells[i][name_col_id].label))
+                                Log.debug('Completed: {} ({}) @ {}[\'{}\']'.format(mentee_name, pid, mentor, cells[i][name_col_id].label))
                                 cells[i][name_col_id].set_text_format('strikethrough', True)
                                 current_value = cells[i][0].value
                                 if 'autoupdate: no animals' not in current_value.lower():
