@@ -31,9 +31,9 @@ class KittenScraper(object):
         start_time = time.time()
 
         arg_parser = ArgumentParser()
-        arg_parser.add_argument('-i', '--input', help = 'specify the daily kitten report (xls), or optionally a comma-separated list of animal numbers', required = False)
+        arg_parser.add_argument('-i', '--input', help = 'specify the daily foster report (xls), or optionally a comma-separated list of animal numbers', required = False)
         arg_parser.add_argument('-s', '--mentee_status', help = 'retrieve current mentee status [verbose,autoupdate,export]', required = False, nargs='?', default='', const='yes')
-        arg_parser.add_argument('-c', '--config', help = 'specify a config file', required = False, default='config.yaml')
+        arg_parser.add_argument('-c', '--config', help = 'specify a config file (optional, defaults to \'config.yaml\')', required = False, default='config.yaml')
         arg_parser.add_argument('-b', '--show_browser', help = 'show the browser window (generally for debugging)', required = False, action = 'store_true')
         args = arg_parser.parse_args()
 
