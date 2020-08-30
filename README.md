@@ -66,7 +66,11 @@ dog_mode : True
 
 ## Google Sheets Integration
 
-Google Sheets integration and Google Sheets API platform access will require a ```client_secret.json``` file. [Instructions by pygsheets](https://pygsheets.readthedocs.io/en/stable/authorization.html) will assist you in creating this file. Copy ```client_secret.json``` to the kitten-scraper directory.
+Google Sheets integration and Google Sheets API platform access will require a ```client_secret.json``` file:
+1. Sign into your Google account and visit https://developers.google.com/sheets/api/quickstart/python. You only need to follow "Step 1" on this page.
+2. Click the "Enable the Google Sheets API" button.
+3. When asked to "Configure your OAuth client", select "Desktop app".
+4. You should then be presented with a "Download Client Configuration" button. Click and save the file into the kitten-scraper folder. The name of the file is not important, but it does need to match the ```google_client_secret``` entry in your config.yaml file.
 
 The ```google_spreadsheet_key``` value for config.yaml value can be found in the URL of the mentor spreadsheet.
 
@@ -99,9 +103,9 @@ optional arguments:
   -h, --help            show this help message and exit
 
   -c CONFIG, --config CONFIG
-                        specify a config.yaml file
+                        specify a config file (optional, defaults to 'config.yaml')
 
-  -i, --input INPUT     specify the daily kitten report (xls), or optionally a comma-separated list of animal numbers
+  -i, --input INPUT     specify the daily foster report (xls), or optionally a comma-separated list of animal numbers
 
   -s, --mentee_status [verbose,autoupdate,export]
                         retrieve current mentee status
