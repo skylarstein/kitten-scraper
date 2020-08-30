@@ -67,7 +67,7 @@ dog_mode : True
 ## Google Sheets Integration
 
 Google Sheets integration and Google Sheets API platform access will require a ```client_secret.json``` file:
-1. Sign into your Google account and visit https://developers.google.com/sheets/api/quickstart/python. You only need to follow "Step 1" on this page.
+1. Sign into your Google account and visit https://developers.google.com/sheets/api/quickstart/python. You only need to follow "Step 1" on this page, as described in the following steps.
 2. Click the "Enable the Google Sheets API" button.
 3. When asked to "Configure your OAuth client", select "Desktop app".
 4. You should then be presented with a "Download Client Configuration" button. Click and save the file into the kitten-scraper folder. The name of the file is not important, but it does need to match the ```google_client_secret``` entry in your config.yaml file.
