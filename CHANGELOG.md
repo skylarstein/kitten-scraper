@@ -1,5 +1,9 @@
 # 😺 [Kitten Scraper](https://github.com/skylarstein/kitten-scraper) Change Log
 
+## [2.3.0](https://github.com/skylarstein/kitten-scraper/compare/v2.2.0...v2.3.0) (2020-09-12)
+
+* General cleanup
+
 ## [2.2.0](https://github.com/skylarstein/kitten-scraper/compare/v2.1.0...v2.2.0) (2020-07-07)
 
 * Auto-update completed mentees in the mentor spreadsheet
