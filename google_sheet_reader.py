@@ -26,8 +26,14 @@ class GoogleSheetReader(SheetReaderBase):
                         mentor_match_cells += worksheet.get_values('C2', 'C{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
                         mentor_match_cells += worksheet.get_values('E2', 'E{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
                         self._mentor_match_values[Utils.utf8(worksheet.title)] = [Utils.utf8(item).lower() for sublist in mentor_match_cells for item in sublist]
+
+                        # Header rows vary slightly between feline and canine. Perform a quick and dirty validation.
+                        #
+                        if ['ID'] not in worksheet.get_values('E1', 'E2'):
+                            raise Exception('') from Exception
+
                     except Exception:
-                        Log.debug('Unable to load mentor sheet \'{}\', maybe this isn\'t a mentor sheet'.format(worksheet.title))
+                        Log.debug('Sheet \'{}\' does not appear to be a mentor sheet (skipping)'.format(worksheet.title))
 
         except Exception as e:
             Log.error('ERROR: Unable to load mentors spreadsheet!\r\n{}, {}'.format(str(e), repr(e)))
@@ -111,6 +117,7 @@ class GoogleSheetReader(SheetReaderBase):
                             name_cell_format = cells[i][name_col_id].text_format
                             if not name_cell_format or 'strikethrough' not in name_cell_format or name_cell_format['strikethrough'] is False:
                                 mentee_name = cells[i][name_col_id].value
+                                mentee_name = mentee_name.replace('\n', ' ').replace('\r', '')
                                 Log.debug('Completed: {} ({}) @ {}[\'{}\']'.format(mentee_name, pid, mentor, cells[i][name_col_id].label))
                                 cells[i][name_col_id].set_text_format('strikethrough', True)
                                 current_value = cells[i][0].value
