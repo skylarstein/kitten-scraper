@@ -370,10 +370,9 @@ class KittenScraper(object):
                 animal_data[a_number]['status_date'] = 'Unknown'
 
             # If this animal is currently in foster, get the responsible person (foster parent).
-            # Dog mode: include all status other than 'adopted'
             #
             status = status.lower()
-            if (self._dog_mode and 'adopted' not in status) or ('in foster' in status and 'unassisted death' not in status):
+            if ('in foster' in status and 'unassisted death' not in status):
                 try:
                     p_number = int(self._get_attr_by_xpath('href', '//*[@id="Table17"]/tbody/tr[1]/td[2]/a').split('personid=')[1])
                     foster_parents.setdefault(p_number, []).append(a_number)
