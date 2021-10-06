@@ -119,7 +119,9 @@ class GoogleSheetReader(SheetReaderBase):
                                 mentee_name = cells[i][name_col_id].value
                                 mentee_name = mentee_name.replace('\n', ' ').replace('\r', '')
                                 Log.debug('Completed: {} ({}) @ {}[\'{}\']'.format(mentee_name, pid, mentor, cells[i][name_col_id].label))
-                                cells[i][name_col_id].set_text_format('strikethrough', True)
-                                current_value = cells[i][0].value
-                                if 'autoupdate: no animals' not in current_value.lower():
-                                    cells[i][0].set_value('AutoUpdate: No animals {}\r\n{}'.format(date.today().strftime('%b %-d, %Y'), current_value))
+                                debug_mode = True # TODO: Will be addressed after testing
+                                if not debug_mode:
+                                    cells[i][name_col_id].set_text_format('strikethrough', True)
+                                    current_value = cells[i][0].value
+                                    if 'autoupdate: no animals' not in current_value.lower():
+                                        cells[i][0].set_value('AutoUpdate: No animals {}\r\n{}'.format(date.today().strftime('%b %-d, %Y'), current_value))

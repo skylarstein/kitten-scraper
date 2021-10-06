@@ -59,7 +59,7 @@ class BoxSheetReader(SheetReaderBase):
                     mentees = []
                     break
 
-                elif str(cells[i][0].value).lower().find('completed mentees without') >= 0:
+                elif str(cells[i][0].value).lower().find('completed mentees') >= 0:
                     break # We've reach the end of the "active mentee" rows
 
                 elif cells[i][name_col_id].value and cells[i][pid_col_id].value:
