@@ -98,7 +98,7 @@ class KittenScraper(object):
                     for mentee in current['mentees']:
                         self._print_and_write(status_file, '    {} ({}) - {} animals'.format(mentee['name'],  mentee['pid'], len(mentee['current_animals'])))
                         for a_number, data in mentee['current_animals'].items():
-                            self._print_and_write(status_file, '        {} (S/N {}, Bio {}, Photo {})'.format(a_number, data['sn'], data['bio'], data['photo']))
+                            self._print_and_write(status_file, '        {}, {}, S/N {}, Bio {}, Photo {})'.format(a_number, data['age'], data['sn'], data['bio'], data['photo']))
                 else:
                     self._print_and_write(status_file, '    ** No current mentees **')
 
@@ -437,10 +437,10 @@ class KittenScraper(object):
             if age.days >= 365:
                 years = math.floor(age.days / 365)
                 months = round((age.days % 365) / 30)
-                age_string = '{:.0f} year{}, {:.0f} month{}'.format(years,
-                                                                    's' if years > 1 else '',
-                                                                    months,
-                                                                    's' if months != 1 else '')
+                age_string = '{:.0f} year{}'.format(years,'s' if years > 1 else '')
+                if months:
+                    age_string += ', {:.0f} month{}'.format(months, 's' if months != 1 else '')
+
                 animal_type = self.ADULT_ANIMAL_TYPE
 
             elif age.days >= 90:
