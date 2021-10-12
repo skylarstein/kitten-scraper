@@ -4,7 +4,9 @@
 ![Python | 3.6.x](https://img.shields.io/badge/Python-3.6.x-brightgreen.svg)
 ![Kitten Machine | Active](https://img.shields.io/badge/Kitten%20Machine-Active-brightgreen.svg)
 
-Kitten-scraper will import the daily Feline Foster report, automatically retrieve additional information for each animal and foster parent, and match foster parents to their existing Feline Foster Mentors.
+Kitten-scraper will import the daily Feline Foster report, automatically retrieve additional information for each animal and foster parent, and match foster parents to their existing Feline Foster Mentors. Bonus feature: Dog Mode mode is supported as discussed below.
+
+Obligatory disclaimer: this project has grown iteratively over time. It's really time for some refactoring, code re-use, optimizations, and Python modernization. That day is not today. I have baby kittens to feed.
 
 ```text
                                                                      _                ___       _.--.
@@ -74,25 +76,6 @@ Google Sheets integration and Google Sheets API platform access will require a `
 
 The ```google_spreadsheet_key``` value for config.yaml value can be found in the URL of the mentor spreadsheet.
 
-## Box Sheets Integration
-
-Box integration requires the creation of a new app via the Box Dev Console.
-
-1. Assure you have 2-step verification enabled for your Box account. [Log in to your account](https://app.box.com/account), scroll down to Authentication, and enable if necessary.
-
-2. Visit the [Dev Console](https://app.box.com/developers/console) and create a new *Enterprise Integration* app. Select "*OAuth 2.0 with JWT (Server Authentication)*", enter any name you like (e.g. Kitten-Scraper or Puppy-Scraper), *Create App*, then *View Your App*.
-
-3. Visit your App's configuration screen
-    * From *Application Access*, select *Enterprise*
-    * From *Advanced Features*, select *Perform Actions as Users*
-    * From *Add and Manage Public Keys*, click *Generate a Public/Private Keypair*. This will download an ```xxx_xxx_config.json``` file. Copy this to your kitten-scraper directory.
-
-4. Vist your App's *General* screen. From the *App Authorization* section, click *Submit for Authorization*. This will generate an email with an API Key. Follow the instructions in the email.
-
-5. The ```box_user_id``` for config.yaml can be found in on your *Account Settings* page, as *Account ID*.
-
-6. The ```box_file_id``` for config.yaml value can be found in the URL of the mentor spreadsheet.
-
 ## Command Line Arguments
 
 ```text
@@ -107,7 +90,7 @@ optional arguments:
 
   -i, --input INPUT     specify the daily foster report (xls), or optionally a comma-separated list of animal numbers
 
-  -s, --mentee_status [verbose,autoupdate,export]
+  -s, --status [verbose,autoupdate,export]
                         retrieve current mentee status
                         'verbose' : includes additional animal details
                         'autoupdate' : flags completed mentees in the mentor spreadsheet
