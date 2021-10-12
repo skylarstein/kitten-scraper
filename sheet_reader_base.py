@@ -45,4 +45,5 @@ class SheetReaderBase(metaclass=ABCMeta):
                                       'resources',
                                       'calendar',
                                       'meetings/orientations dates',
+                                      'foster s-n appts',
                                       self._config_sheet_name.lower()]

@@ -1,4 +1,5 @@
 from datetime import date
+import time
 import pygsheets
 from kitten_utils import Log, Utils
 from sheet_reader_base import SheetReaderBase
@@ -7,6 +8,7 @@ class GoogleSheetReader(SheetReaderBase):
     def load_mentors_spreadsheet(self, auth):
         ''' Load the feline foster spreadsheet
         '''
+        start_time = time.time()
         try:
             Log.success('Loading mentors spreadsheet from Google Sheets (id = \'{}\')...'.format(auth['google_spreadsheet_key']))
 
@@ -17,20 +19,22 @@ class GoogleSheetReader(SheetReaderBase):
 
             for worksheet in spreadsheet.worksheets():
                 if not self._is_reserved_sheet(worksheet.title):
-                    self._mentor_sheets.append(worksheet)
-
+                    Log.debug(f'Reading worksheet \"{worksheet.title}\"...')
                     try:
-                        # Build a list of mentee names/emails/ids to be used for mentor matching
-                        #
-                        mentor_match_cells = worksheet.get_values('B2', 'B{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
-                        mentor_match_cells += worksheet.get_values('C2', 'C{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
-                        mentor_match_cells += worksheet.get_values('E2', 'E{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
-                        self._mentor_match_values[Utils.utf8(worksheet.title)] = [Utils.utf8(item).lower() for sublist in mentor_match_cells for item in sublist]
-
-                        # Header rows vary slightly between feline and canine. Perform a quick and dirty validation.
+                        # Header rows vary slightly between feline and canine. Perform a terrible quick-and-dirty validation.
                         #
                         if ['ID'] not in worksheet.get_values('E1', 'E2'):
                             raise Exception('') from Exception
+
+                        # Build a list of mentee names/emails/ids to be used for mentor matching
+                        #
+                        b_rows = worksheet.get_values('B2', 'B{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
+                        c_rows = worksheet.get_values('C2', 'C{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
+                        e_rows = worksheet.get_values('E2', 'E{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
+
+                        mentor_match_cells = b_rows + c_rows + e_rows
+                        self._mentor_match_values[Utils.utf8(worksheet.title)] = [Utils.utf8(item).lower() for sublist in mentor_match_cells for item in sublist]
+                        self._mentor_sheets.append(worksheet)
 
                     except Exception:
                         Log.debug('Sheet \'{}\' does not appear to be a mentor sheet (skipping)'.format(worksheet.title))
@@ -39,7 +43,7 @@ class GoogleSheetReader(SheetReaderBase):
             Log.error('ERROR: Unable to load mentors spreadsheet!\r\n{}, {}'.format(str(e), repr(e)))
             return None
 
-        print('Loaded {} mentors from \"{}\"'.format(len(self._mentor_sheets), spreadsheet.title))
+        print('Loaded {0} mentors from \"{1}\" in {2:.0f} seconds'.format(len(self._mentor_sheets), spreadsheet.title, time.time() - start_time))
         return config_yaml
 
     def get_current_mentees(self):
@@ -119,7 +123,7 @@ class GoogleSheetReader(SheetReaderBase):
                                 mentee_name = cells[i][name_col_id].value
                                 mentee_name = mentee_name.replace('\n', ' ').replace('\r', '')
                                 Log.debug('Completed: {} ({}) @ {}[\'{}\']'.format(mentee_name, pid, mentor, cells[i][name_col_id].label))
-                                debug_mode = True # TODO: Will be addressed after testing
+                                debug_mode = False
                                 if not debug_mode:
                                     cells[i][name_col_id].set_text_format('strikethrough', True)
                                     current_value = cells[i][0].value

@@ -32,12 +32,12 @@ class KittenScraper(object):
 
         arg_parser = ArgumentParser()
         arg_parser.add_argument('-i', '--input', help = 'specify the daily foster report (xls), or optionally a comma-separated list of animal numbers', required = False)
-        arg_parser.add_argument('-s', '--mentee_status', help = 'retrieve current mentee status [autoupdate,export]', required = False, nargs='?', default='', const='yes')
+        arg_parser.add_argument('-s', '--status', help = 'retrieve current mentee status [verbose,autoupdate,export]', required = False, nargs='?', default='', const='yes')
         arg_parser.add_argument('-c', '--config', help = 'specify a config file (optional, defaults to \'config.yaml\')', required = False, default='config.yaml')
         arg_parser.add_argument('-b', '--show_browser', help = 'show the browser window (generally for debugging)', required = False, action = 'store_true')
         args = arg_parser.parse_args()
 
-        if not args.input and not args.mentee_status:
+        if not args.input and not args.status:
             arg_parser.print_help()
             sys.exit(0)
 
@@ -80,11 +80,12 @@ class KittenScraper(object):
         if not self._login():
             sys.exit()
 
-        current_mentee_status = self._get_current_mentee_status(args.mentee_status) if args.mentee_status else None
+        current_mentee_status = self._get_current_mentee_status(args.status) if args.status else None
 
         if current_mentee_status:
             status_file = None
-            export_status = 'export' in args.mentee_status
+            export_status = 'export' in args.status
+            verbose_status = 'verbose' in args.status
 
             if export_status:
                 status_file_path = os.path.join(Utils.default_dir(), '{}_foster_mentor_status_{}.txt'.format(self.BASE_ANIMAL_TYPE, date.today().strftime('%Y.%m.%d')))
@@ -98,7 +99,10 @@ class KittenScraper(object):
                     for mentee in current['mentees']:
                         self._print_and_write(status_file, '    {} ({}) - {} animals'.format(mentee['name'],  mentee['pid'], len(mentee['current_animals'])))
                         for a_number, data in mentee['current_animals'].items():
-                            self._print_and_write(status_file, '        {}, {}, S/N {}, Bio {}, Photo {})'.format(a_number, data['age'], data['sn'], data['bio'], data['photo']))
+                            if verbose_status:
+                                self._print_and_write(status_file, '        {}, {}, S/N {}, Bio {}, Photo {})'.format(a_number, data['age'], data['sn'], data['bio'], data['photo']))
+                            else:
+                                self._print_and_write(status_file, '        {}'.format(a_number))
                 else:
                     self._print_and_write(status_file, '    ** No current mentees **')
 
@@ -168,6 +172,7 @@ class KittenScraper(object):
     def _start_browser(self, show_browser):
         ''' Instantiate the browser, configure options as needed
         '''
+        Log.success('Starting chromedriver...')
         chrome_options = webdriver.ChromeOptions()
         chrome_options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/605.1.15 '
                                     '(KHTML, like Gecko) Version/12.0.3 Safari/605.1.15')
@@ -272,6 +277,7 @@ class KittenScraper(object):
             configuration data vs rollout of config.yaml updates.
         '''
         try:
+            Log.success('Reading configuration data from spreadsheet...')
             config = yaml.load(additional_config_yaml, Loader=yaml.SafeLoader)
             self._login_url = config['login_url']
             self._search_url = config['search_url']
@@ -557,8 +563,7 @@ class KittenScraper(object):
 
             Load the list of all animals this person has been responsible for, page by page until we have no more pages.
 
-            FUTURE REFACTOR: Consider combining this with _current_animals_fostered()
-            FUTURE REFACTOR: Do not return a mystery tuple. Named dictionary keys or object attribute please.
+            FUTURE REFACTOR: Consider combining this with _current_animals_fostered?
         '''
         page_number = 1
         previous_foster_count = 0
@@ -585,7 +590,6 @@ class KittenScraper(object):
                             if any(s in animal_type for s in target_types):
                                 if 'in foster' not in animal_status or animal_status == 'unassisted death - in foster':
                                     previous_foster_count += 1
-
                                 if 'euthanized' in animal_status:
                                     euthanized_count += 1
                                 elif 'unassisted death' in animal_status:
@@ -614,12 +618,12 @@ class KittenScraper(object):
         result = [pair[search_key] for pair in search_dict if search_key in pair]
         return result[0] if result else None
 
-    def _get_current_mentee_status(self, arg_mentee_status):
+    def _get_current_mentee_status(self, arg_status):
         ''' Get current mentees and mentee status for each mentor
         '''
-        autoupdate_completed_mentees = 'autoupdate' in arg_mentee_status # mark 'completed' mentors in the spreadsheet
-        Log.success('Looking up mentee status (autoupdate_completed_mentees = {})...'.format(autoupdate_completed_mentees))
-
+        autoupdate_completed_mentees = 'autoupdate' in arg_status # mark 'completed' mentors in the spreadsheet
+        verbose_status = 'verbose' in arg_status
+        Log.success('Looking up mentee status (verbose = {}, autoupdate_completed_mentees = {})...'.format(verbose_status, autoupdate_completed_mentees))
         completed_mentees = {}
         current_mentees = self.mentor_sheet_reader.get_current_mentees()
         for current in current_mentees:
@@ -631,10 +635,11 @@ class KittenScraper(object):
                     current_animal_ids = self._current_animals_fostered(mentee['pid'])
                     mentee['current_animals'] = {}
 
-                    animal_data, _, _ = self._get_animal_data(current_animal_ids, True)
+                    if verbose_status:
+                        animal_data, _, _ = self._get_animal_data(current_animal_ids, True)
 
                     for current_animal_id in current_animal_ids:
-                        mentee['current_animals'][current_animal_id] = animal_data[current_animal_id]
+                        mentee['current_animals'][current_animal_id] = animal_data[current_animal_id] if verbose_status else {}
 
                     if current_animal_ids:
                         current['active_count'] = current['active_count'] + 1
