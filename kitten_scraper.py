@@ -100,7 +100,7 @@ class KittenScraper(object):
                         self._print_and_write(status_file, '    {} ({}) - {} animals'.format(mentee['name'],  mentee['pid'], len(mentee['current_animals'])))
                         for a_number, data in mentee['current_animals'].items():
                             if verbose_status:
-                                self._print_and_write(status_file, '        {}, {}, S/N {}, Bio {}, Photo {})'.format(a_number, data['age'], data['sn'], data['bio'], data['photo']))
+                                self._print_and_write(status_file, '        {}, {}, S/N {}, Bio {}, Photo {}'.format(a_number, data['age'], data['sn'], data['bio'], data['photo']))
                             else:
                                 self._print_and_write(status_file, '        {}'.format(a_number))
                 else:
