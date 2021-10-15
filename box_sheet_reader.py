@@ -9,14 +9,14 @@ class BoxSheetReader(SheetReaderBase):
         ''' Load the feline foster spreadsheet
         '''
         try:
-            Log.success('Loading mentors spreadsheet from Box (id = {})...'.format(auth['box_file_id']))
+            Log.success(f'Loading mentors spreadsheet from Box (id = {auth["box_file_id"]})...')
 
             jwt_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), auth['box_jwt'])
             client = Client(JWTAuth.from_settings_file(jwt_path))
             box_file = client.as_user(client.user(user_id = auth['box_user_id'])).file(file_id=auth['box_file_id']).get()
             xlxs_workbook = xlrd.open_workbook(file_contents=box_file.content())
 
-            config_yaml = xlxs_workbook.sheet_by_name(self._config_sheet_name).row_values(1)[0]
+            config_yaml = xlxs_workbook.sheet_by_name(self._CONFIG_SHEET_NAME).row_values(1)[0]
 
             for sheet_name in xlxs_workbook.sheet_names():
                 if not self._is_reserved_sheet(sheet_name):
@@ -26,10 +26,10 @@ class BoxSheetReader(SheetReaderBase):
                     self._mentor_match_values[Utils.utf8(sheet_name)] = [Utils.utf8(str(item)).lower() for sublist in all_values for item in sublist]
 
         except Exception as e:
-            Log.error('ERROR: Unable to load Feline Foster spreadsheet!\r\n{}, {}'.format(str(e), repr(e)))
+            Log.error(f'ERROR: Unable to load Feline Foster spreadsheet!\r\n{str(e)}, {repr(e)}')
             return None
 
-        print('Loaded {} mentors from \"{}\"'.format(len(self._mentor_sheets), box_file['name']))
+        print(f'Loaded {len(self._mentor_sheets)} mentors from \"{box_file["name"]}\"')
         return config_yaml
 
     def get_current_mentees(self):
@@ -40,7 +40,7 @@ class BoxSheetReader(SheetReaderBase):
             if worksheet.name.lower() == 'retired mentor':
                 continue
 
-            print('Loading current mentees for {}... '.format(worksheet.name), end='')
+            print(f'Loading current mentees for {worksheet.name}... ', end='')
 
             # It's much faster to grab a whole block of cells at once vs iterating through many API calls
             #
@@ -55,7 +55,7 @@ class BoxSheetReader(SheetReaderBase):
             for i in range(1, max_search_rows):
                 if i == max_search_rows - 1:
                     search_failed = True
-                    Log.error('Unable to determine current mentees for mentor {}'.format(worksheet.name))
+                    Log.error(f'Unable to determine current mentees for mentor {worksheet.name}')
                     mentees = []
                     break
 
@@ -69,11 +69,11 @@ class BoxSheetReader(SheetReaderBase):
                         mentees.append({'name' : mentee_name, 'pid' : pid})
 
             if not search_failed:
-                print('found {}'.format(len(mentees)))
+                print(f'found {len(mentees)}')
 
             current_mentees.append({ 'mentor' : worksheet.name, 'mentees' : mentees})
 
         return current_mentees
 
     def set_completed_mentees(self, mentor, mentee_ids):
-        raise NotImplementedError('set_completed_mentees not implemented in {}'.format(__file__))
+        raise NotImplementedError(f'set_completed_mentees not implemented in {__file__}')

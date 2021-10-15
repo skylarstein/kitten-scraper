@@ -3,11 +3,11 @@ from kitten_utils import Utils
 
 class SheetReaderBase(metaclass=ABCMeta):
     def __init__(self):
-        self._config_sheet_name = 'Config'
-        self.surgery_sheet_name = 'Foster S-N Appts'
+        self._CONFIG_SHEET_NAME = 'Config'
+        self._SURGERY_SHEET_NAME = 'Foster S-N Appts'
         self._mentor_sheets = []
         self._mentor_match_values = {}
-        self.surgery_dates = {}
+        self._surgery_dates = {}
 
     @abstractmethod
     def load_mentors_spreadsheet(self, auth):
@@ -34,6 +34,9 @@ class SheetReaderBase(metaclass=ABCMeta):
 
         return matching_mentors
 
+    def get_surgery_date(self, a_number):
+        return self._surgery_dates[a_number] if a_number in self._surgery_dates else ''
+
     def _find_column_by_name(self, cells, name):
         for n in range(0, len(cells[0])):
             if cells[0][n].value == name:
@@ -47,4 +50,4 @@ class SheetReaderBase(metaclass=ABCMeta):
                                       'resources',
                                       'calendar',
                                       'meetings/orientations dates',
-                                      self._config_sheet_name.lower()]
+                                      self._CONFIG_SHEET_NAME.lower()]
