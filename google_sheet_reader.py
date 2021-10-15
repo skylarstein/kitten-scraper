@@ -1,4 +1,5 @@
 from datetime import date
+import time
 import pygsheets
 from kitten_utils import Log, Utils
 from sheet_reader_base import SheetReaderBase
@@ -7,34 +8,73 @@ class GoogleSheetReader(SheetReaderBase):
     def load_mentors_spreadsheet(self, auth):
         ''' Load the feline foster spreadsheet
         '''
+        start_time = time.time()
         try:
-            Log.success('Loading mentors spreadsheet from Google Sheets (id = \'{}\')...'.format(auth['google_spreadsheet_key']))
+            Log.success(f'Loading mentors spreadsheet from Google Sheets (id = \'{auth["google_spreadsheet_key"]}\')...')
 
             client = pygsheets.authorize(auth['google_client_secret'])
             spreadsheet = client.open_by_key(auth['google_spreadsheet_key'])
 
-            config_yaml = spreadsheet.worksheet_by_title(self._config_sheet_name)[2][0]
+            config_yaml = spreadsheet.worksheet_by_title(self._CONFIG_SHEET_NAME)[2][0]
 
             for worksheet in spreadsheet.worksheets():
                 if not self._is_reserved_sheet(worksheet.title):
-                    self._mentor_sheets.append(worksheet)
-
+                    Log.debug(f'Reading worksheet \"{worksheet.title}\"...')
                     try:
+                        if self.check_for_surgery_sheet(worksheet):
+                            continue
+
+                        # Mentor sheet header rows vary slightly between feline and canine. Perform a terrible quick-and-dirty validation.
+                        #
+                        if ['ID'] not in worksheet.get_values('E1', 'E2'):
+                            raise Exception('') from Exception
+
                         # Build a list of mentee names/emails/ids to be used for mentor matching
                         #
-                        mentor_match_cells = worksheet.get_values('B2', 'B{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
-                        mentor_match_cells += worksheet.get_values('C2', 'C{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
-                        mentor_match_cells += worksheet.get_values('E2', 'E{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
+                        b_rows = worksheet.get_values('B2', f'B{worksheet.rows}', include_tailing_empty = False, include_tailing_empty_rows = False)
+                        c_rows = worksheet.get_values('C2', f'C{worksheet.rows}', include_tailing_empty = False, include_tailing_empty_rows = False)
+                        e_rows = worksheet.get_values('E2', f'E{worksheet.rows}', include_tailing_empty = False, include_tailing_empty_rows = False)
+
+                        mentor_match_cells = b_rows + c_rows + e_rows
                         self._mentor_match_values[Utils.utf8(worksheet.title)] = [Utils.utf8(item).lower() for sublist in mentor_match_cells for item in sublist]
+                        self._mentor_sheets.append(worksheet)
+
                     except Exception:
-                        Log.debug('Unable to load mentor sheet \'{}\', maybe this isn\'t a mentor sheet'.format(worksheet.title))
+                        Log.debug(f'Sheet \'{worksheet.title}\' does not appear to be a mentor sheet (skipping)')
 
         except Exception as e:
-            Log.error('ERROR: Unable to load mentors spreadsheet!\r\n{}, {}'.format(str(e), repr(e)))
+            Log.error(f'ERROR: Unable to load mentors spreadsheet!\r\n{str(e)}, {repr(e)}')
             return None
 
-        print('Loaded {} mentors from \"{}\"'.format(len(self._mentor_sheets), spreadsheet.title))
+        print('Loaded {0} mentors from \"{1}\" in {2:.0f} seconds'.format(len(self._mentor_sheets), spreadsheet.title, time.time() - start_time))
         return config_yaml
+
+    def check_for_surgery_sheet(self, worksheet):
+        if worksheet.title == self._SURGERY_SHEET_NAME:
+            surgery_rows = worksheet.get_values('A1', f'E{worksheet.rows}', include_tailing_empty = False, include_tailing_empty_rows = False)
+            date_col = -1
+            patient_col = -1
+            for col in range(0, len(surgery_rows[0])):
+                if 'date' in str(surgery_rows[0][col]).lower():
+                    date_col = col
+                elif 'patient' in str(surgery_rows[0][col]).lower():
+                    patient_col = col
+
+            if date_col != -1 and patient_col != -1:
+                for row in range(1, len(surgery_rows)):
+                    try:
+                        self._surgery_dates[int(surgery_rows[row][patient_col])] = surgery_rows[row][date_col]
+                    except Exception as e:
+                        Log.error(f'Error while processing surgery sheet!\r\n{str(e)}, {repr(e)}')
+                        self._surgery_dates = {}
+                        return True
+            else:
+                Log.error(f'Surgery for not in expected format (date_col={date_col}, patient_col={patient_col}. Skipping.')
+
+            Log.debug(f'Loaded surgery sheet ({len(self._surgery_dates)} entries)')
+            return True
+
+        return False
 
     def get_current_mentees(self):
         ''' Return the current mentees assigned to each mentor
@@ -43,12 +83,12 @@ class GoogleSheetReader(SheetReaderBase):
         for worksheet in self._mentor_sheets:
             if worksheet.title.lower() == 'retired mentor':
                 continue
-            print('Loading current mentees for {}... '.format(worksheet.title), end='', flush=True)
+            print(f'Loading current mentees for {worksheet.title}... ', end='', flush=True)
 
             # It's much faster to grab a whole block of cells at once vs iterating through many API calls
             #
             max_search_rows = min(100, worksheet.rows)
-            cells = worksheet.range('A1:G{}'.format(max_search_rows), returnas='cells')
+            cells = worksheet.range(f'A1:G{max_search_rows}', returnas='cells')
 
             name_col_id = self._find_column_by_name(cells, 'Name')
             pid_col_id = self._find_column_by_name(cells, 'ID')
@@ -60,7 +100,7 @@ class GoogleSheetReader(SheetReaderBase):
             for i in range(1, max_search_rows):
                 if i == max_search_rows - 1:
                     search_failed = True
-                    Log.error('Unable to determine current mentees for mentor {}'.format(worksheet.title))
+                    Log.error(f'Unable to determine current mentees for mentor {worksheet.title}')
                     mentees = []
                     break
 
@@ -79,7 +119,7 @@ class GoogleSheetReader(SheetReaderBase):
                         mentees.append({'name' : mentee_name, 'pid' : pid})
 
             if not search_failed:
-                print('found {}'.format(len(mentees)))
+                print(f'found {len(mentees)}')
 
             current_mentees.append({ 'mentor' : worksheet.title,
                                      'mentees' : mentees,
@@ -94,7 +134,7 @@ class GoogleSheetReader(SheetReaderBase):
         for worksheet in self._mentor_sheets:
             if worksheet.title.lower() == mentor.lower():
                 max_search_rows = min(100, worksheet.rows)
-                cells = worksheet.range('A1:G{}'.format(max_search_rows), returnas='cells')
+                cells = worksheet.range(f'A1:G{max_search_rows}', returnas='cells')
 
                 name_col_id = self._find_column_by_name(cells, 'Name')
                 pid_col_id = self._find_column_by_name(cells, 'ID')
@@ -111,8 +151,11 @@ class GoogleSheetReader(SheetReaderBase):
                             name_cell_format = cells[i][name_col_id].text_format
                             if not name_cell_format or 'strikethrough' not in name_cell_format or name_cell_format['strikethrough'] is False:
                                 mentee_name = cells[i][name_col_id].value
-                                Log.debug('Completed: {} ({}) @ {}[\'{}\']'.format(mentee_name, pid, mentor, cells[i][name_col_id].label))
-                                cells[i][name_col_id].set_text_format('strikethrough', True)
-                                current_value = cells[i][0].value
-                                if 'autoupdate: no animals' not in current_value.lower():
-                                    cells[i][0].set_value('AutoUpdate: No animals {}\r\n{}'.format(date.today().strftime('%b %-d, %Y'), current_value))
+                                mentee_name = mentee_name.replace('\n', ' ').replace('\r', '')
+                                Log.debug(f'Completed: {mentee_name} ({pid}) @ {mentor}[\'{cells[i][name_col_id].label}\']')
+                                debug_mode = False
+                                if not debug_mode:
+                                    cells[i][name_col_id].set_text_format('strikethrough', True)
+                                    current_value = cells[i][0].value
+                                    if 'autoupdate: no animals' not in current_value.lower():
+                                        cells[i][0].set_value(f'AutoUpdate: No animals {date.today().strftime("%b %-d, %Y")}\r\n{current_value}')

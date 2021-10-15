@@ -16,19 +16,19 @@ class Log():
 
     @staticmethod
     def success(msg):
-        print('{}{}{}'.format(Log.GREEN, msg, Log.END))
+        print(f'{Log.GREEN}{msg}{Log.END}')
 
     @staticmethod
     def warn(msg):
-        print('{}{}{}'.format(Log.YELLOW, msg, Log.END))
+        print(f'{Log.YELLOW}{msg}{Log.END}')
 
     @staticmethod
     def error(msg):
-        print('{}{}{}'.format(Log.RED, msg, Log.END))
+        print(f'{Log.RED}{msg}{Log.END}')
 
     @staticmethod
     def debug(msg):
-        print('{}{}{}'.format(Log.CYAN, msg, Log.END))
+        print(f'{Log.CYAN}{msg}{Log.END}')
 
 class Utils():
     @staticmethod

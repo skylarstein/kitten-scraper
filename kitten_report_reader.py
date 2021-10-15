@@ -2,7 +2,7 @@ from datetime import datetime
 import xlrd
 from kitten_utils import Log
 
-class KittenReportReader(object):
+class KittenReportReader:
     ''' KittenReportReader will load animal numbers from the incoming daily foster report. All other data will be
         queried during runtime since other data in the report may already be outdated (or even initially incorrect).
     '''
@@ -18,7 +18,7 @@ class KittenReportReader(object):
             self._sheet = self._workbook.sheet_by_index(0)
 
             if not self._sheet.nrows:
-                Log.error('ERROR: I\'m afraid you have an empty report: {}'.format(xls_filename))
+                Log.error(f'ERROR: I\'m afraid you have an empty report: {xls_filename}')
                 return None
 
             # Perform some initial sanity checks
@@ -37,10 +37,10 @@ class KittenReportReader(object):
                 self._sheet.row_values(0)[ANIMAL_AGE_COL] != 'Age' or
                 self._sheet.row_values(0)[FOSTER_PARENT_ID_COL] != 'Foster Parent ID'):
 
-                Log.error('ERROR: Unexpected column layout in the report. Something has changed! {}'.format(xls_filename))
+                Log.error(f'ERROR: Unexpected column layout in the report. Something has changed! {xls_filename}')
                 return None
 
-            Log.success('Loaded report {}'.format(xls_filename))
+            Log.success(f'Loaded report {xls_filename}')
 
             animal_numbers = set()
             for row_number in range(1, self._sheet.nrows):
@@ -53,14 +53,15 @@ class KittenReportReader(object):
             return animal_numbers
 
         except IOError as err:
-            Log.error('ERROR: Unable to read xls file: {}, {}'.format(xls_filename, err))
+            Log.error(f'ERROR: Unable to read xls file: {xls_filename}, {err}')
 
         except xlrd.XLRDError as err:
-            Log.error('ERROR: Unable to read xls file: {}, {}'.format(xls_filename, err))
+            Log.error(f'ERROR: Unable to read xls file: {xls_filename}, {err}')
 
         return None
 
-    def _xlsfloat_as_datetime(self, xlsfloat, workbook_datemode):
+    @staticmethod
+    def _xlsfloat_as_datetime(xlsfloat, workbook_datemode):
         if not xlsfloat:
             return None
 
@@ -75,10 +76,11 @@ class KittenReportReader(object):
             result = dt.strftime('="%d-%b-%Y %-I:%M %p"')
 
         elif cell_type == xlrd.XL_CELL_NUMBER:
-            result = '="{}"'.format(str(int(self._sheet.row_values(row_number)[col_number])))
+            result = f'="{str(int(self._sheet.row_values(row_number)[col_number]))}"'
 
         else:
             s = str(self._sheet.row_values(row_number)[col_number])
-            result = '"{}"'.format(s if s != 'null' else '')
+            s = s if s != 'null' else ''
+            result = f'"{s}"'
 
         return result

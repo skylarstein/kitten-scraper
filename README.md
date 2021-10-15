@@ -4,7 +4,11 @@
 ![Python | 3.6.x](https://img.shields.io/badge/Python-3.6.x-brightgreen.svg)
 ![Kitten Machine | Active](https://img.shields.io/badge/Kitten%20Machine-Active-brightgreen.svg)
 
-Kitten-scraper will import the daily Feline Foster report, automatically retrieve additional information for each animal and foster parent, and match foster parents to their existing Feline Foster Mentors.
+Kitten-Scraper will import the daily Feline Foster report, automatically retrieve additional status for each foster animal, determine the current foster parent, and match foster parents to their existing Feline Foster mentors. Bonus feature: "Dog Mode" mode is supported for the Canine Foster program as well.
+
+Why is this program named "Kitten-Scraper"? Good question! This program looks up animal status by automating the Chrome web browser. This is much (*much!*) faster than manually using a web browser yourself... entering your request for each foster animal, each foster parent, pressing enter, copying/pasting the result, etc. Automating a web browser to read information from a web page is call "web scraping". So there we have "Kitten-Scraper".
+
+*Obligatory disclaimer for anyone reading this code: this "quick weekend project" has significantly grown over time. It's time for some refactoring, code re-use, optimizations, and Python modernization. It's also time to start considering some unit tests. That day is not today. I have baby kittens to feed.*
 
 ```text
                                                                      _                ___       _.--.
@@ -18,53 +22,59 @@ Kitten-scraper will import the daily Feline Foster report, automatically retriev
 
 ## Assure you have Python 3 installed
 
-*Note: Depending on your installation, the 'python3' command may be available as 'python'. Same story with the 'pip3' command mentioned below - it may instead simply be 'pip'. You can check the version from the command line as seen below. Use whichever command responds with Python version 3.x.x*
+*Note: Depending on your installation, the 'python3' command may be available as 'python'. Same situation with the 'pip3' command - it may instead simply be 'pip'. You can check the version from the command line as seen below. Use whichever command responds with Python version 3.x.x*
 
 ```text
 $ python --version
 $ python3 --version
+$ pip --version
+$ pip3 --version
 ```
 
 ## Assure you have the Chrome web browser installed
 
 https://www.google.com/chrome/
 
+## Assure you have a matching ```chromedriver``` installed
+
+If your Chrome web browser auto-updates or you manually install a new version, you may need to download the latest matching ```chromedriver``` binary and place it in the ```kitten-scraper/bin``` sub-directory that matches your operating system (macOS, Windows, or Linux). The ```chromedriver``` binary allows Kitten-Scraper to automate the Chrome web browser.
+
+https://chromedriver.chromium.org/downloads
+
 ## Clone the Repository and Install Dependencies
 
-Clone the repository from the command line or optionally [download the zip archive](https://github.com/skylarstein/kitten-scraper/archive/master.zip). Performing 'pip3 install -r requirements.txt' from the command line is required in either case.
+Clone the repository from the command line or optionally [download the zip archive](https://github.com/skylarstein/kitten-scraper/archive/master.zip). Performing ```pip install -r requirements.txt``` from the command line is required in either case.
 
 ```text
 $ git clone https://github.com/skylarstein/kitten-scraper.git kitten-scraper
 $ cd kitten-scraper
-$ pip3 install -r requirements.txt
+$ pip install -r requirements.txt
 ```
 
 ## Setup and Configuration
 
 ### config.yaml
 
-Create a text file named 'config.yaml' in the kitten-scraper directory and enter your credentials and configuration in this format:
+Create a text file named 'config.yaml' in the kitten-scraper directory and enter your credentials and configuration in the format as show below. You can also copy/paste this text as a starting point:
 
 ```yaml
 # Required
 username : 'your_username'
 password : 'your_password'
 
-# Optional. Include only if the mentor spreadsheet lives on Google Sheets.
+# Required
 google_spreadsheet_key : 'key'
 google_client_secret : 'client_secret.json'
 
-# Optional. Include only if the mentor spreadsheet lives on Box.
-box_user_id : 'id'
-box_file_id : 'id'
-box_jwt : 'xxx_xxx_config.json'
-
-# Bonus configuration: Dog mode! There are some slight differences when running Kitten Scraper
-# with Canine Foster reports. To enable "dog mode", add the following line:
+# Bonus configuration: Dog mode! There are some slight differences when running Kitten-Scraper
+# with Canine Foster reports. To enable "dog mode", add the following line.
+# For Feline mode, delete this line or set to False
 dog_mode : True
 ```
 
 ## Google Sheets Integration
+
+*Warning/Apology: These instructions are likely deprecated. Google really likes to make this part difficult.*
 
 Google Sheets integration and Google Sheets API platform access will require a ```client_secret.json``` file:
 1. Sign into your Google account and visit https://developers.google.com/sheets/api/quickstart/python. You only need to follow "Step 1" on this page, as described in the following steps.
@@ -73,25 +83,6 @@ Google Sheets integration and Google Sheets API platform access will require a `
 4. You should then be presented with a "Download Client Configuration" button. Click and save the file into the kitten-scraper folder. The name of the file is not important, but it does need to match the ```google_client_secret``` entry in your config.yaml file.
 
 The ```google_spreadsheet_key``` value for config.yaml value can be found in the URL of the mentor spreadsheet.
-
-## Box Sheets Integration
-
-Box integration requires the creation of a new app via the Box Dev Console.
-
-1. Assure you have 2-step verification enabled for your Box account. [Log in to your account](https://app.box.com/account), scroll down to Authentication, and enable if necessary.
-
-2. Visit the [Dev Console](https://app.box.com/developers/console) and create a new *Enterprise Integration* app. Select "*OAuth 2.0 with JWT (Server Authentication)*", enter any name you like (e.g. Kitten-Scraper or Puppy-Scraper), *Create App*, then *View Your App*.
-
-3. Visit your App's configuration screen
-    * From *Application Access*, select *Enterprise*
-    * From *Advanced Features*, select *Perform Actions as Users*
-    * From *Add and Manage Public Keys*, click *Generate a Public/Private Keypair*. This will download an ```xxx_xxx_config.json``` file. Copy this to your kitten-scraper directory.
-
-4. Vist your App's *General* screen. From the *App Authorization* section, click *Submit for Authorization*. This will generate an email with an API Key. Follow the instructions in the email.
-
-5. The ```box_user_id``` for config.yaml can be found in on your *Account Settings* page, as *Account ID*.
-
-6. The ```box_file_id``` for config.yaml value can be found in the URL of the mentor spreadsheet.
 
 ## Command Line Arguments
 
@@ -107,25 +98,51 @@ optional arguments:
 
   -i, --input INPUT     specify the daily foster report (xls), or optionally a comma-separated list of animal numbers
 
-  -s, --mentee_status [verbose,autoupdate,export]
+  -s, --status [verbose,autoupdate,export]
                         retrieve current mentee status
-                        'verbose' : includes additional animal details
-                        'autoupdate' : flags completed mentees in the mentor spreadsheet
-                        'export' : exports mentee status to text file
+                        'verbose' : (optional) includes additional animal details
+                        'autoupdate' : (optional) marks completed mentees in the mentor spreadsheet
+                        'export' : (optional) exports mentee status to text file
 
-  -b, --show_browser    show the browser window (generally for debugging)
+  -b, --show_browser    show the web browser window (generally used for debugging)
 ```
 
 ## Let's Do This
 
-To generate a report, run kitten-scraper.py from the command line. Specify the path to the original feline foster report xls (--input) as well as the desired output file name (--output):
+To generate a report, run ```kitten-scraper.py``` from the command line. Specify the path to the daily "animals to foster" report xls with ```--input```:
 
 ```text
-$ python3 kitten_scraper.py --input ~/Downloads/FosterReport-May12.xls
+$ python kitten_scraper.py --input ~/Downloads/FosterReport-May12.xls
 ```
 
-To create a mentee status report, include --mentee_status with 'export' to save a mentee status file to your Desktop
+The following ```--status``` command line arguments are optional, and may be combined with or without ```--input```: 
+
+Basic mentee status includes active mentee count and surgery status (if available):
 
 ```text
-$ python3 kitten_scraper.py --mentee_status export,verbose
+$ python kitten_scraper.py --status
+```
+
+Verbose animal status additionally includes bio status, photo status, and age. Note that this will add additional runtime to Kitten-Scraper:
+
+```text
+$ python kitten_scraper.py --status "verbose"
+```
+
+To auto-update/auto-complete mentees who no longer currently have foster animals, include the "autoupdate" status directive:
+
+```text
+$ python kitten_scraper.py --status "autoupdate"
+```
+
+Status is always logged to the command line, but to export status to a file on your desktop, include the "export" status directive:
+
+```text
+$ python kitten_scraper.py --status "export"
+```
+
+Status directives may be combined as comma separated list of commands:
+
+```text
+$ python3 kitten_scraper.py --status "verbose,autoupdate,export"
 ```
