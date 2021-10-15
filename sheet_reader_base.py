@@ -4,8 +4,10 @@ from kitten_utils import Utils
 class SheetReaderBase(metaclass=ABCMeta):
     def __init__(self):
         self._config_sheet_name = 'Config'
+        self.surgery_sheet_name = 'Foster S-N Appts'
         self._mentor_sheets = []
         self._mentor_match_values = {}
+        self.surgery_dates = {}
 
     @abstractmethod
     def load_mentors_spreadsheet(self, auth):
@@ -45,5 +47,4 @@ class SheetReaderBase(metaclass=ABCMeta):
                                       'resources',
                                       'calendar',
                                       'meetings/orientations dates',
-                                      'foster s-n appts',
                                       self._config_sheet_name.lower()]

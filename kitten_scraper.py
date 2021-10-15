@@ -99,10 +99,13 @@ class KittenScraper(object):
                     for mentee in current['mentees']:
                         self._print_and_write(status_file, '    {} ({}) - {} animals'.format(mentee['name'],  mentee['pid'], len(mentee['current_animals'])))
                         for a_number, data in mentee['current_animals'].items():
+                            surgery_info = ''
+                            if a_number in self.mentor_sheet_reader.surgery_dates:
+                                surgery_info = f', Surgery Date {self.mentor_sheet_reader.surgery_dates[a_number]}'
                             if verbose_status:
-                                self._print_and_write(status_file, '        {}, {}, S/N {}, Bio {}, Photo {}'.format(a_number, data['age'], data['sn'], data['bio'], data['photo']))
+                                self._print_and_write(status_file, '        {}, {}, S/N {}, Bio {}, Photo {}{}'.format(a_number, data['age'], data['sn'], data['bio'], data['photo'], surgery_info))
                             else:
-                                self._print_and_write(status_file, '        {}'.format(a_number))
+                                self._print_and_write(status_file, '        {}{}'.format(a_number, surgery_info))
                 else:
                     self._print_and_write(status_file, '    ** No current mentees **')
 

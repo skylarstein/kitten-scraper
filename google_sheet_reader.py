@@ -21,7 +21,10 @@ class GoogleSheetReader(SheetReaderBase):
                 if not self._is_reserved_sheet(worksheet.title):
                     Log.debug(f'Reading worksheet \"{worksheet.title}\"...')
                     try:
-                        # Header rows vary slightly between feline and canine. Perform a terrible quick-and-dirty validation.
+                        if self.check_for_surgery_sheet(worksheet):
+                            continue
+
+                        # Mentor sheet header rows vary slightly between feline and canine. Perform a terrible quick-and-dirty validation.
                         #
                         if ['ID'] not in worksheet.get_values('E1', 'E2'):
                             raise Exception('') from Exception
@@ -45,6 +48,33 @@ class GoogleSheetReader(SheetReaderBase):
 
         print('Loaded {0} mentors from \"{1}\" in {2:.0f} seconds'.format(len(self._mentor_sheets), spreadsheet.title, time.time() - start_time))
         return config_yaml
+
+    def check_for_surgery_sheet(self, worksheet):
+        if worksheet.title == self.surgery_sheet_name:
+            surgery_rows = worksheet.get_values('A1', 'E{}'.format(worksheet.rows), include_tailing_empty = False, include_tailing_empty_rows = False)
+            date_col = -1
+            patient_col = -1
+            for col in range(0, len(surgery_rows[0])):
+                if 'date' in str(surgery_rows[0][col]).lower():
+                    date_col = col
+                elif 'patient' in str(surgery_rows[0][col]).lower():
+                    patient_col = col
+
+            if date_col != -1 and patient_col != -1:
+                for row in range(1, len(surgery_rows)):
+                    try:
+                        self.surgery_dates[int(surgery_rows[row][patient_col])] = surgery_rows[row][date_col]
+                    except Exception as e:
+                        Log.error('Error while processing surgery sheet!\r\n{}, {}'.format(str(e), repr(e)))
+                        self.surgery_dates = {}
+                        return True
+            else:
+                Log.error(f'Surgery for not in expected format (date_col={date_col}, patient_col={patient_col}. Skipping.')
+
+            Log.debug(f'Loaded surgery sheet ({len(self.surgery_dates)} entries)')
+            return True
+
+        return False
 
     def get_current_mentees(self):
         ''' Return the current mentees assigned to each mentor
