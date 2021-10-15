@@ -1,5 +1,17 @@
 # 😺 [Kitten Scraper](https://github.com/skylarstein/kitten-scraper) Change Log
 
+## [2.4.0](https://github.com/skylarstein/kitten-scraper/compare/v2.3.0...v2.4.0) (2021-10-15)
+
+* Been a while. How's things?
+* Mentee and animal status: handle server-side changes that broke web scraping. Pull animal bio status, photo status, age (credit to Carla for this great idea). Pull surgery appointment from mentor spreadsheet. Optimizations.
+* Fix auto-complete of mentee status (mentees with multiple pages of "Responsible For" animals were not handled previously)
+* Fix "currently in foster" edge cases when operating in "dog mode"
+* Improved validation/identification of mentor sheets
+* Update to chromedriver 94.0.4606.61
+* Update Python package dependencies (requirements.txt)
+* Removing most mentions of the Box spreadsheet reader. This code will need some updates if we ever want to support Box again.
+* General cleanup
+
 ## [2.3.0](https://github.com/skylarstein/kitten-scraper/compare/v2.2.0...v2.3.0) (2020-09-12)
 
 * General cleanup
