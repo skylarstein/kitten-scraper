@@ -50,28 +50,35 @@ class GoogleSheetReader(SheetReaderBase):
         return config_yaml
 
     def check_for_surgery_sheet(self, worksheet):
-        if worksheet.title == self._SURGERY_SHEET_NAME:
-            surgery_rows = worksheet.get_values('A1', f'E{worksheet.rows}', include_tailing_empty = False, include_tailing_empty_rows = False)
+        if any(worksheet.title in substr for substr in self._SURGERY_SHEET_NAMES):
+            surgery_rows = worksheet.get_values('A1', f'H{worksheet.rows}', include_tailing_empty = False, include_tailing_empty_rows = False)
             date_col = -1
             patient_col = -1
             for col in range(0, len(surgery_rows[0])):
-                if 'date' in str(surgery_rows[0][col]).lower():
+                # Allow for an extra header row (accounting for differences between Feline and Canine)
+                #
+                if any('date' in substr for substr in [str(surgery_rows[0][col]).lower(), str(surgery_rows[1][col]).lower()]):
                     date_col = col
-                elif 'patient' in str(surgery_rows[0][col]).lower():
+                elif 'patient' in (str(surgery_rows[0][col]).lower(), str(surgery_rows[1][col]).lower()):
                     patient_col = col
 
             if date_col != -1 and patient_col != -1:
                 for row in range(1, len(surgery_rows)):
                     try:
-                        self._surgery_dates[int(surgery_rows[row][patient_col])] = surgery_rows[row][date_col]
+                        a_number = surgery_rows[row][patient_col]
+                        if a_number.isdigit():
+                            a_number = int(a_number)
+                            # If there are multiple entries for a given a_number, assume the first is the most recent.
+                            #
+                            if a_number not in self._surgery_dates:
+                                self._surgery_dates[int(a_number)] = surgery_rows[row][date_col]
                     except Exception as e:
-                        Log.error(f'Error while processing surgery sheet!\r\n{str(e)}, {repr(e)}')
-                        self._surgery_dates = {}
-                        return True
+                        Log.warn(f'Surgery sheet column {patient_col} row {row} is empty. Assuming this is the end of the list.')
+                        break
             else:
-                Log.error(f'Surgery for not in expected format (date_col={date_col}, patient_col={patient_col}. Skipping.')
+                Log.error(f'Surgery form is not in expected format (date_col={date_col}, patient_col={patient_col}. Skipping.')
 
-            Log.debug(f'Loaded surgery sheet ({len(self._surgery_dates)} entries)')
+            Log.debug(f'Loaded {len(self._surgery_dates)} entries from the surgery sheet')
             return True
 
         return False
@@ -93,6 +100,8 @@ class GoogleSheetReader(SheetReaderBase):
             name_col_id = self._find_column_by_name(cells, 'Name')
             pid_col_id = self._find_column_by_name(cells, 'ID')
             date_col_id = self._find_column_by_name(cells, 'Date\nKittens\nReceived')
+            if date_col_id == -1:
+                date_col_id = self._find_column_by_name(cells, 'Date Dog Received')
 
             mentees = []
             search_failed = False
@@ -107,7 +116,7 @@ class GoogleSheetReader(SheetReaderBase):
                 elif str(cells[i][0].value).lower().find('completed mentees') >= 0:
                     break # We've reached the end of the "active mentee" rows
 
-                elif cells[i][name_col_id].value and cells[i][pid_col_id].value:
+                elif cells[i][name_col_id].value and str(cells[i][pid_col_id].value).isdigit():
                     mentee_name = cells[i][name_col_id].value
                     pid = int(cells[i][pid_col_id].value)
                     received_date = Utils.string_to_datetime(cells[i][date_col_id].value)
@@ -143,7 +152,7 @@ class GoogleSheetReader(SheetReaderBase):
                     if str(cells[i][0].value).lower().find('completed mentees') >= 0:
                         break # We've reached the end of the "active mentee" rows
 
-                    elif cells[i][name_col_id].value and cells[i][pid_col_id].value:
+                    if cells[i][name_col_id].value and str(cells[i][pid_col_id].value).isdigit():
                         pid = int(cells[i][pid_col_id].value)
                         if pid in mentee_ids:
                             # If this mentee name cell is already marked with strikethrough, leave it alone
@@ -153,9 +162,9 @@ class GoogleSheetReader(SheetReaderBase):
                                 mentee_name = cells[i][name_col_id].value
                                 mentee_name = mentee_name.replace('\n', ' ').replace('\r', '')
                                 Log.debug(f'Completed: {mentee_name} ({pid}) @ {mentor}[\'{cells[i][name_col_id].label}\']')
-                                debug_mode = False
+                                debug_mode = True
                                 if not debug_mode:
-                                    cells[i][name_col_id].set_text_format('strikethrough', True)
-                                    current_value = cells[i][0].value
+                                    #cells[i][name_col_id].set_text_format('strikethrough', True)
+                                    #current_value = cells[i][0].value
                                     if 'autoupdate: no animals' not in current_value.lower():
                                         cells[i][0].set_value(f'AutoUpdate: No animals {date.today().strftime("%b %-d, %Y")}\r\n{current_value}')

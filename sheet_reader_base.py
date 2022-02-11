@@ -4,7 +4,7 @@ from kitten_utils import Utils
 class SheetReaderBase(metaclass=ABCMeta):
     def __init__(self):
         self._CONFIG_SHEET_NAME = 'Config'
-        self._SURGERY_SHEET_NAME = 'Foster S-N Appts'
+        self._SURGERY_SHEET_NAMES = ['Foster S-N Appts', 'Spay_Neuter Appts']
         self._mentor_sheets = []
         self._mentor_match_values = {}
         self._surgery_dates = {}
@@ -39,9 +39,10 @@ class SheetReaderBase(metaclass=ABCMeta):
 
     def _find_column_by_name(self, cells, name):
         for n in range(0, len(cells[0])):
-            if cells[0][n].value == name:
+            # Allow for an optional header when searching for column names
+            if any(name in substr for substr in [cells[0][n].value, cells[1][n].value]):
                 return n
-        return 0
+        return -1
 
     def _is_reserved_sheet(self, sheet_name):
         return sheet_name.lower() in ['contact info',
@@ -49,5 +50,8 @@ class SheetReaderBase(metaclass=ABCMeta):
                                       'announcements',
                                       'resources',
                                       'calendar',
+                                      'template',
+                                      'forms',
+                                      'mentor meetings',
                                       'meetings/orientations dates',
                                       self._CONFIG_SHEET_NAME.lower()]
