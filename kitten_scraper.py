@@ -773,8 +773,8 @@ class KittenScraper:
                 outfile.write('\n\n\n*** Animals not in foster\n')
                 Log.warn('\nAnimals not in foster')
                 for a_number in animals_not_in_foster:
-                    outfile.write('{} - {}\n'.format(a_number, animal_data[a_number]['status']))
-                    print('{} - {}'.format(a_number, animal_data[a_number]['status']))
+                    outfile.write('{} {} - {}\n'.format(a_number,  animal_data[a_number]['type'], animal_data[a_number]['status']))
+                    print('{} {} - {}'.format(a_number,  animal_data[a_number]['type'], animal_data[a_number]['status']))
 
             if current_mentee_status:
                 outfile.write('\n\nMentor,Active Mentees,Last Assigned (days ago)\n')
