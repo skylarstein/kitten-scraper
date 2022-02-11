@@ -255,9 +255,7 @@ class KittenScraper:
             if self._dog_mode:
                 Log.warn('** Dog Mode is Active **')
 
-            self.YOUNG_ANIMAL_TYPE = 'kitten' if not self._dog_mode else 'puppy'
-            self.ADULT_ANIMAL_TYPE = 'cat' if not self._dog_mode else 'dog'
-            self.BASE_ANIMAL_TYPE = 'feline' if not self._dog_mode else 'canine'
+            self.BASE_ANIMAL_TYPE = 'feline_and_critters' if not self._dog_mode else 'canine'
 
         except yaml.YAMLError as err:
             Log.error(f'ERROR: Unable to parse configuration file: {config_file}, {err}')
@@ -363,6 +361,7 @@ class KittenScraper:
             sub_status = self._get_selection_by_id('subStatus')
             animal_data[a_number]['status'] = f'{status}{" - " if sub_status else ""}{sub_status}'
             animal_data[a_number]['name'] = self._get_attr_by_id('animalname').strip()
+            animal_data[a_number]['type'] = self._get_attr_by_id('type')
             animal_data[a_number]['breed'] = self._get_attr_by_id('primaryBreed').strip()
             animal_data[a_number]['primary_color'] = self._get_selection_by_id('primaryColour')
             animal_data[a_number]['secondary_color'] = self._get_selection_by_id('secondaryColour')
@@ -371,10 +370,9 @@ class KittenScraper:
 
             try:
                 age = datetime.now() - datetime.strptime(self._get_attr_by_id('dob'), '%m/%d/%Y')
-                animal_data[a_number]['age'], animal_data[a_number]['type'] = self._stringify_age_and_type(age)
+                animal_data[a_number]['age'] = self._stringify_age(age)
             except Exception:
                 animal_data[a_number]['age'] = 'Unknown Age'
-                animal_data[a_number]['type'] = self.BASE_ANIMAL_TYPE
 
             try:
                 animal_data[a_number]['status_date'] = datetime.strptime(self._get_attr_by_id('statusdate'), '%m/%d/%Y').strftime('%-d-%b-%Y')
@@ -436,7 +434,7 @@ class KittenScraper:
 
         return animal_data, foster_parents, animals_not_in_foster
 
-    def _stringify_age_and_type(self, age):
+    def _stringify_age(self, age):
         ''' To keep things brief and easy to read, I'll floor()/round() months and weeks. This is close enough for
             informational purposes.
         '''
@@ -448,22 +446,17 @@ class KittenScraper:
                 if months:
                     age_string += ', {:.0f} month{}'.format(months, 's' if months != 1 else '')
 
-                animal_type = self.ADULT_ANIMAL_TYPE
-
             elif age.days >= 90:
                 months = math.floor(age.days / 30)
                 age_string = f'{months} month{"s" if months > 1 else ""}'
-                animal_type = self.YOUNG_ANIMAL_TYPE if age.days <= (365 / 2) else self.ADULT_ANIMAL_TYPE
 
             else:
                 weeks = math.floor(age.days / 7)
                 age_string = f'{weeks} week{"s" if weeks > 1 else ""}'
-                animal_type = self.YOUNG_ANIMAL_TYPE
         except Exception:
-            animal_type = self.BASE_ANIMAL_TYPE
             age_string = 'Unknown Age'
 
-        return age_string, animal_type
+        return age_string
 
     def _get_spay_neuter_status(self, animal_number):
         ''' Load spay/neuter status from the medical details page
@@ -677,7 +670,7 @@ class KittenScraper:
                         animal_status = cols[2].text.lower()
                         animal_type = cols[5].text.lower()
                         animal_number = int(cols[3].text)
-                        target_types = ['cat', 'kitten'] if not self._dog_mode else ['dog', 'puppy']
+                        target_types = ['cat', 'kitten', 'rodent', 'guinea pig'] if not self._dog_mode else ['dog', 'puppy']
                         if 'in foster' in animal_status and animal_status != 'unassisted death - in foster' and animal_type in target_types:
                             animal_number = int(cols[3].text)
                             if animal_number not in current_animals: # ignore duplicates
@@ -703,7 +696,7 @@ class KittenScraper:
         csv_rows[-1].append('Phone')
         csv_rows[-1].append('Person ID')
         csv_rows[-1].append('Foster Experience')
-        csv_rows[-1].append(f'Date {self.BASE_ANIMAL_TYPE.capitalize()}s Received')
+        csv_rows[-1].append('Date Animals Received')
         if self._dog_mode:
             csv_rows[-1].append('"Name, Breed, Color"')
         csv_rows[-1].append('Animal Details')
@@ -780,8 +773,8 @@ class KittenScraper:
                 outfile.write('\n\n\n*** Animals not in foster\n')
                 Log.warn('\nAnimals not in foster')
                 for a_number in animals_not_in_foster:
-                    outfile.write('{} - {}\n'.format(a_number, animal_data[a_number]['status']))
-                    print('{} - {}'.format(a_number, animal_data[a_number]['status']))
+                    outfile.write('{} {} - {}\n'.format(a_number,  animal_data[a_number]['type'], animal_data[a_number]['status']))
+                    print('{} {} - {}'.format(a_number,  animal_data[a_number]['type'], animal_data[a_number]['status']))
 
             if current_mentee_status:
                 outfile.write('\n\nMentor,Active Mentees,Last Assigned (days ago)\n')
