@@ -1,5 +1,10 @@
 # 😺 [Kitten Scraper](https://github.com/skylarstein/kitten-scraper) Change Log
 
+## [2.5.0](https://github.com/skylarstein/kitten-scraper/compare/v2.4.0...v2.5.0) (2022-02-11)
+
+* Improved support for mentee status and animal status in "dog mode"
+* Includes critter support in feline reports (guinea pig, hamster, rat)
+
 ## [2.4.0](https://github.com/skylarstein/kitten-scraper/compare/v2.3.0...v2.4.0) (2021-10-15)
 
 * Been a while. How's things?
