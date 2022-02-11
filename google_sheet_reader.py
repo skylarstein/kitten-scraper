@@ -73,7 +73,7 @@ class GoogleSheetReader(SheetReaderBase):
                             if a_number not in self._surgery_dates:
                                 self._surgery_dates[int(a_number)] = surgery_rows[row][date_col]
                     except Exception as e:
-                        Log.warn(f'Surgery sheet column {patient_col} row {row} is empty. Assuming this is the end of the list.')
+                        Log.warn(f'{worksheet.title} column {patient_col}, row {row} is empty. Assuming this is the end of the list.')
                         break
             else:
                 Log.error(f'Surgery form is not in expected format (date_col={date_col}, patient_col={patient_col}. Skipping.')
@@ -162,7 +162,7 @@ class GoogleSheetReader(SheetReaderBase):
                                 mentee_name = cells[i][name_col_id].value
                                 mentee_name = mentee_name.replace('\n', ' ').replace('\r', '')
                                 Log.debug(f'Completed: {mentee_name} ({pid}) @ {mentor}[\'{cells[i][name_col_id].label}\']')
-                                debug_mode = True
+                                debug_mode = False
                                 if not debug_mode:
                                     #cells[i][name_col_id].set_text_format('strikethrough', True)
                                     #current_value = cells[i][0].value

@@ -4,7 +4,7 @@
 ![Python | 3.6.x](https://img.shields.io/badge/Python-3.6.x-brightgreen.svg)
 ![Kitten Machine | Active](https://img.shields.io/badge/Kitten%20Machine-Active-brightgreen.svg)
 
-Kitten-Scraper will import the daily Feline Foster report, automatically retrieve additional status for each foster animal, determine the current foster parent, and match foster parents to their existing Feline Foster mentors. Bonus feature: "Dog Mode" mode is supported for the Canine Foster program as well.
+Kitten-Scraper will import the daily Feline Foster report, automatically retrieve additional status for each foster animal, determine the current foster parent, and match foster parents to their existing Feline Foster mentors. Bonus feature: "Dog Mode" mode is supported for the Canine Foster program as well. Double bonus feature: critter such as guinea pigs, hamsters, and rats are supported within feline foster reports as well.
 
 Why is this program named "Kitten-Scraper"? Good question! This program looks up animal status by automating the Chrome web browser. This is much (*much!*) faster than manually using a web browser yourself... entering your request for each foster animal, each foster parent, pressing enter, copying/pasting the result, etc. Automating a web browser to read information from a web page is call "web scraping". So there we have "Kitten-Scraper".
 
