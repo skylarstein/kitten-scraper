@@ -147,6 +147,7 @@ class GoogleSheetReader(SheetReaderBase):
 
                 name_col_id = self._find_column_by_name(cells, 'Name')
                 pid_col_id = self._find_column_by_name(cells, 'ID')
+                notes_col_id = 0
 
                 for i in range(1, max_search_rows):
                     if str(cells[i][0].value).lower().find('completed mentees') >= 0:
@@ -164,7 +165,7 @@ class GoogleSheetReader(SheetReaderBase):
                                 Log.debug(f'Completed: {mentee_name} ({pid}) @ {mentor}[\'{cells[i][name_col_id].label}\']')
                                 debug_mode = False
                                 if not debug_mode:
-                                    #cells[i][name_col_id].set_text_format('strikethrough', True)
-                                    #current_value = cells[i][0].value
-                                    if 'autoupdate: no animals' not in current_value.lower():
-                                        cells[i][0].set_value(f'AutoUpdate: No animals {date.today().strftime("%b %-d, %Y")}\r\n{current_value}')
+                                    cells[i][name_col_id].set_text_format('strikethrough', True)
+                                    notes_current_value = cells[i][notes_col_id].value
+                                    if 'autoupdate: no animals' not in notes_current_value.lower():
+                                        cells[i][notes_col_id].set_value(f'AutoUpdate: No animals {date.today().strftime("%b %-d, %Y")}\r\n{notes_current_value}')
