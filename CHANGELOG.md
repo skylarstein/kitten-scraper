@@ -1,5 +1,10 @@
 # 😺 [Kitten Scraper](https://github.com/skylarstein/kitten-scraper) Change Log
 
+## [2.5.1](https://github.com/skylarstein/kitten-scraper/compare/v2.5.0...v2.5.1) (2022-03-21)
+
+* Fixed a bug that prevented auto-complete of mentees without animals
+* Forgot to include "rabbit" as supported critter type
+
 ## [2.5.0](https://github.com/skylarstein/kitten-scraper/compare/v2.4.0...v2.5.0) (2022-02-11)
 
 * Improved support for mentee status and animal status in "dog mode"
