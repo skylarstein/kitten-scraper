@@ -670,7 +670,7 @@ class KittenScraper:
                         animal_status = cols[2].text.lower()
                         animal_type = cols[5].text.lower()
                         animal_number = int(cols[3].text)
-                        target_types = ['cat', 'kitten', 'rodent', 'guinea pig'] if not self._dog_mode else ['dog', 'puppy']
+                        target_types = ['cat', 'kitten', 'rodent', 'guinea pig', 'rabbit'] if not self._dog_mode else ['dog', 'puppy']
                         if 'in foster' in animal_status and animal_status != 'unassisted death - in foster' and animal_type in target_types:
                             animal_number = int(cols[3].text)
                             if animal_number not in current_animals: # ignore duplicates
