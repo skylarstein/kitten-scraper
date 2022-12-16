@@ -18,7 +18,7 @@ class GoogleSheetReader(SheetReaderBase):
             config_yaml = spreadsheet.worksheet_by_title(self._CONFIG_SHEET_NAME)[2][0]
 
             for worksheet in spreadsheet.worksheets():
-                if not self._is_reserved_sheet(worksheet.title):
+                if not self._is_reserved_sheet(worksheet.title) and not worksheet.hidden:
                     Log.debug(f'Reading worksheet \"{worksheet.title}\"...')
                     try:
                         if self.check_for_surgery_sheet(worksheet):
