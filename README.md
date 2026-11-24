@@ -1,10 +1,11 @@
-# A little bit of web scraping and automation for the Feline / Canine Foster Mentor Program
-
 ![Platform macOS | Linux | Windows](https://img.shields.io/badge/Platform-macOS%20|%20Linux%20|%20Windows-brightgreen.svg)
 ![Python | 3.6.x](https://img.shields.io/badge/Python-3.6.x-brightgreen.svg)
-![Kitten Machine | Active](https://img.shields.io/badge/Kitten%20Machine-Active-brightgreen.svg)
+![Status | Offline](https://img.shields.io/badge/Status-EOL-red)
 
-Kitten-Scraper will import the daily Feline Foster report, automatically retrieve additional status for each foster animal, determine the current foster parent, and match foster parents to their existing Feline Foster mentors. Bonus feature: "Dog Mode" mode is supported for the Canine Foster program as well. Double bonus feature: critter such as guinea pigs, hamsters, and rats are supported within feline foster reports as well.
+> [!NOTE]
+> Kitten-Scraper was a web scraper targeting the Shelter Buddy animal shelter management platform. Written line by line by a human in the olden days before AI. Why web scraping? I didn't have direct database or API access. This was designed for a very specific use case within the feline and canine foster programs. This repo was shared publicly for other members of the team.
+
+This app will import the daily Feline Foster report, automatically retrieve additional status for each foster animal, determine the current foster parent, and match foster parents to their existing Feline Foster mentors. Bonus feature: "Dog Mode" mode is supported for the Canine Foster program as well. Double bonus feature: critter such as guinea pigs, hamsters, and rats are supported within feline foster reports as well.
 
 Why is this program named "Kitten-Scraper"? Good question! This program looks up animal status by automating the Chrome web browser. This is much (*much!*) faster than manually using a web browser yourself... entering your request for each foster animal, each foster parent, pressing enter, copying/pasting the result, etc. Automating a web browser to read information from a web page is call "web scraping". So there we have "Kitten-Scraper".
 
